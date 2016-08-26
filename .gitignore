@@ -1,0 +1,10 @@
+*.pyc
+*.swp
+*.egg
+env/
+cover/
+build/
+docs/_build
+mugen.egg-info/
+.ropeproject/
+__pycache__/
