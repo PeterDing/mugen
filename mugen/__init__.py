@@ -8,4 +8,5 @@ from mugen.api import (
     get,
     post,
     request,
+    session,
 )

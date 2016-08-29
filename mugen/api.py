@@ -5,6 +5,7 @@ from __future__ import unicode_literals, absolute_import
 import asyncio
 
 from mugen.session import Session
+from mugen.models import MAX_CONNECTION_POOL, MAX_POOL_TASKS
 
 
 @asyncio.coroutine
@@ -23,7 +24,8 @@ def head(url,
                                   data=data,
                                   cookies=cookies,
                                   proxy=proxy,
-                                  recycle=recycle)
+                                  recycle=recycle,
+                                  loop=loop)
     return response
 
 
@@ -43,7 +45,8 @@ def get(url,
                                    data=data,
                                    cookies=cookies,
                                    proxy=proxy,
-                                   recycle=recycle)
+                                   recycle=recycle,
+                                   loop=loop)
     return response
 
 
@@ -63,7 +66,8 @@ def post(url,
                                   data=data,
                                   cookies=cookies,
                                   proxy=proxy,
-                                  recycle=recycle)
+                                  recycle=recycle,
+                                  loop=loop)
     return response
 
 
@@ -86,3 +90,16 @@ def request(method, url,
                                           proxy=proxy)
 
     return response
+
+
+def session(recycle=True,
+            encoding='utf-8',
+            max_pool=MAX_CONNECTION_POOL,
+            max_tasks=MAX_POOL_TASKS,
+            loop=None):
+
+    return Session(recycle=recycle,
+                   encoding='utf-8',
+                   max_pool=max_pool,
+                   max_tasks=max_tasks,
+                   loop=loop)
