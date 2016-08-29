@@ -41,6 +41,6 @@ def url_params_encode(params):
         raise TypeError('argument must be str or bytes or dict, NOT {!r}'.format(params))
 
 
-_re_ip = re.compile(r'\d{1,3}:\d{1,3}:\d{1,3}:\d{1,3}')
+_re_ip = re.compile(r'^(http://|https://|)\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}')
 def is_ip(netloc):
-    return _re_ip.search(netloc)
+    return _re_ip.search(netloc) is not None
