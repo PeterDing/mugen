@@ -16,6 +16,7 @@ from mugen.models import (
     MAX_CONNECTION_POOL,
     MAX_POOL_TASKS
 )
+from mugen.utils import is_ip
 
 
 class Session(object):
@@ -102,6 +103,10 @@ class Session(object):
         if proxy:
             key = yield from get_proxy_key(proxy, self.dns_cache)
 
+        if not key and is_ip(host):
+            ip = host.split(':')[0]
+            key = (ip, port, ssl)
+
         if not key and not ssl:
             ip, port = yield from self.dns_cache.get(host, port)
             key = (ip, port, ssl)
@@ -118,6 +123,78 @@ class Session(object):
 
         conn.close()
 
+        return response
+
+
+    @asyncio.coroutine
+    def head(self, url,
+             params=None,
+             headers=None,
+             data=None,
+             cookies=None,
+             proxy=None,
+             allow_redirects=True,
+             recycle=None,
+             encoding=None):
+
+        response = yield from self.request(
+            'HEAD', url,
+            params=params,
+            headers=headers,
+            data=data,
+            cookies=cookies,
+            proxy=proxy,
+            allow_redirects=allow_redirects,
+            recycle=recycle,
+            encoding=encoding)
+        return response
+
+
+    @asyncio.coroutine
+    def get(self, url,
+            params=None,
+            headers=None,
+            data=None,
+            cookies=None,
+            proxy=None,
+            allow_redirects=True,
+            recycle=None,
+            encoding=None):
+
+        response = yield from self.request(
+            'GET', url,
+            params=params,
+            headers=headers,
+            data=data,
+            cookies=cookies,
+            proxy=proxy,
+            allow_redirects=allow_redirects,
+            recycle=recycle,
+            encoding=encoding)
+        return response
+
+
+    @asyncio.coroutine
+    def post(self, url,
+             params=None,
+             headers=None,
+             data=None,
+             cookies=None,
+             proxy=None,
+             allow_redirects=True,
+             recycle=None,
+             encoding=None):
+
+        response = yield from self.request(
+            'POST', url,
+            params=params,
+            headers=headers,
+            data=data,
+            cookies=cookies,
+            proxy=proxy,
+            allow_redirects=allow_redirects,
+            recycle=recycle,
+            encoding=encoding)
         return response
 
 
