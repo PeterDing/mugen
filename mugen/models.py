@@ -147,11 +147,11 @@ class Request(object):
         if data is None:
             return data
 
-        enc_data = ''
+        enc_data = None
         if isinstance(data, dict):
             enc_data = json.dumps(data, ensure_ascii=False)
         elif isinstance(data, str):
-            enc_data = enc_data
+            enc_data = data
         else:
             TypeError('request data must be str or dict, NOT {!r}'.format(data))
 
