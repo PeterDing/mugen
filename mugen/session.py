@@ -121,6 +121,9 @@ class Session(object):
 
         response = yield from self.adapter.get_response(conn)
 
+        # update cookies
+        self.cookies.update(response.cookies)
+
         conn.close()
 
         return response

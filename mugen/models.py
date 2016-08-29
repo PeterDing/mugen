@@ -56,9 +56,12 @@ class Request(object):
         self.params = params or {}
         self.headers = CaseInsensitiveDict(headers or default_headers())
         self.data = data
-        self.cookies = SimpleCookie(cookies)
         self.proxy = proxy
         self.encoding = encoding
+        if cookies is None:
+            self.cookies = SimpleCookie()
+        else:
+            self.cookies = cookies
 
         self.prepare()
 
@@ -100,7 +103,11 @@ class Request(object):
     def make_request_line(self):
         method = self.method
         path = self.url_parse_result.path or '/'
-        request_line = '{} {} {}'.format(method, path, HTTP_VERSION)
+        query = self.url_parse_result.query
+        uri = path
+        if query:
+            uri += '?' + query
+        request_line = '{} {} {}'.format(method, uri, HTTP_VERSION)
         return request_line
 
 
@@ -164,7 +171,10 @@ class HttpResonse(object):
         self.headers = CaseInsensitiveDict()
         self.content = b''
         self.encoding = encoding
-        self.cookies = cookies or SimpleCookie()
+        if cookies is None:
+            self.cookies = SimpleCookie()
+        else:
+            self.cookies = cookies
 
 
     # def on_message_begin(self):
@@ -174,9 +184,9 @@ class HttpResonse(object):
     def on_header(self, name, value):
         name = name.decode(self.encoding)
         value = value.decode(self.encoding)
-        if name.lower == 'set-cookie':
+        if name.lower() == 'set-cookie':
             self.cookies.load(value)
-            if self.headers[name]:
+            if self.headers.get(name):
                 self.headers[name] += ', ' + value
                 return None
         self.headers[name] = value
@@ -229,6 +239,7 @@ class Response(object):
 
         http_response_parser.feed_data(content)
 
+        self.status_code = http_response_parser.get_status_code()
         headers = http_response.headers
         self.headers = headers
 
@@ -266,10 +277,6 @@ class Response(object):
             else:
                 # reading until EOF
                 body += yield from conn.read(-1)
-
-        self.status_code = http_response_parser.get_status_code()
-        self.headers = http_response.headers
-        self.cookies = http_response.cookies
 
         if self.headers.get('Content-Encoding', '').lower() == 'gzip':
             self.content = gzip.decompress(body)
