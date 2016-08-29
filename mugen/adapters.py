@@ -44,11 +44,9 @@ class HTTPAdapter(Singleton):
         data = data.encode('utf-8') if data else None
         conn.send(request_line + b'\r\n')
         conn.send(headers + b'\r\n')
+        conn.send(b'\r\n')
         if data:
-            conn.send(b'\r\n')
-            conn.send(data + b'\r\n')
-        else:
-            conn.send(b'\r\n')
+            conn.send(data)
 
 
     @asyncio.coroutine
