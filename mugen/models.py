@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import logging
 import asyncio
 import json
 import gzip
-from urllib.parse import urlparse, urlunparse, ParseResult
+from urllib.parse import urlparse, ParseResult
 
 from http.cookies import SimpleCookie
 from collections import OrderedDict, deque
@@ -272,8 +271,6 @@ class Response(object):
         self.headers = http_response.headers
         self.cookies = http_response.cookies
 
-        with open('/tmp/t/aaa', 'wb') as fd:
-            fd.write(content)
         if self.headers.get('Content-Encoding', '').lower() == 'gzip':
             self.content = gzip.decompress(body)
         else:
