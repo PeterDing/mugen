@@ -97,6 +97,8 @@ class Request(object):
         headers = self.make_request_headers(host, self.headers, self.cookies)
         data = self.make_request_data(self.data)
 
+        # TODO: encoding file
+
         return request_line, headers, data
 
 
@@ -221,6 +223,12 @@ class Response(object):
         self.content = None
         self.cookies = SimpleCookie()
         self.encoding = encoding
+        self.status_code = None
+        self.history = []
+
+
+    def __repr__(self):
+        return '<Response [{}]>'.format(self.status_code)
 
 
     @asyncio.coroutine
