@@ -12,20 +12,24 @@ from mugen.models import MAX_CONNECTION_POOL, MAX_POOL_TASKS
 def head(url,
          params=None,
          headers=None,
-         data=None,
          cookies=None,
          proxy=None,
+         allow_redirects=False,
          recycle=True,
+         encoding=None,
+         timeout=None,
          loop=None):
 
     response = yield from request('HEAD', url,
-                                  params=params,
-                                  headers=headers,
-                                  data=data,
-                                  cookies=cookies,
-                                  proxy=proxy,
-                                  recycle=recycle,
-                                  loop=loop)
+                                   params=params,
+                                   headers=headers,
+                                   cookies=cookies,
+                                   proxy=proxy,
+                                   allow_redirects=allow_redirects,
+                                   recycle=recycle,
+                                   encoding=encoding,
+                                   timeout=timeout,
+                                   loop=loop)
     return response
 
 
@@ -33,20 +37,24 @@ def head(url,
 def get(url,
         params=None,
         headers=None,
-        data=None,
         cookies=None,
         proxy=None,
+        allow_redirects=True,
         recycle=True,
+        encoding=None,
+        timeout=None,
         loop=None):
 
-    response = yield from  request('GET', url,
-                                   params=params,
-                                   headers=headers,
-                                   data=data,
-                                   cookies=cookies,
-                                   proxy=proxy,
-                                   recycle=recycle,
-                                   loop=loop)
+    response = yield from request('GET', url,
+                                  params=params,
+                                  headers=headers,
+                                  cookies=cookies,
+                                  proxy=proxy,
+                                  allow_redirects=allow_redirects,
+                                  recycle=recycle,
+                                  encoding=encoding,
+                                  timeout=timeout,
+                                  loop=loop)
     return response
 
 
@@ -57,7 +65,10 @@ def post(url,
          data=None,
          cookies=None,
          proxy=None,
+         allow_redirects=True,
          recycle=True,
+         encoding=None,
+         timeout=None,
          loop=None):
 
     response = yield from request('POST', url,
@@ -66,7 +77,10 @@ def post(url,
                                   data=data,
                                   cookies=cookies,
                                   proxy=proxy,
+                                  allow_redirects=allow_redirects,
                                   recycle=recycle,
+                                  encoding=encoding,
+                                  timeout=timeout,
                                   loop=loop)
     return response
 
@@ -78,7 +92,10 @@ def request(method, url,
             data=None,
             cookies=None,
             proxy=None,
+            allow_redirects=True,
             recycle=True,
+            encoding=None,
+            timeout=None,
             loop=None):
 
     session = Session(recycle=recycle, loop=loop)
@@ -87,7 +104,11 @@ def request(method, url,
                                           headers=headers,
                                           data=data,
                                           cookies=cookies,
-                                          proxy=proxy)
+                                          proxy=proxy,
+                                          allow_redirects=allow_redirects,
+                                          recycle=recycle,
+                                          encoding=encoding,
+                                          timeout=timeout)
 
     return response
 
