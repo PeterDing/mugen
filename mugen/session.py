@@ -5,6 +5,7 @@ from __future__ import unicode_literals, absolute_import
 import logging
 import asyncio
 from http.cookies import SimpleCookie
+from urllib.parse import urljoin
 
 from mugen.connection_pool import ConnectionPool
 from mugen.proxy import get_proxy_key
@@ -17,6 +18,7 @@ from mugen.models import (
     MAX_POOL_TASKS
 )
 from mugen.utils import is_ip
+from mugen.exceptions import RedirectLoop
 
 
 class Session(object):
@@ -53,6 +55,49 @@ class Session(object):
 
     @asyncio.coroutine
     def request(self, method, url,
+                params=None,
+                headers=None,
+                data=None,
+                cookies=None,
+                proxy=None,
+                allow_redirects=True,
+                recycle=True,
+                encoding=None,
+                timeout=None):
+
+
+        if allow_redirects:
+            response = yield from asyncio.wait_for(
+                self._redirect(method, url,
+                               params=params,
+                               headers=headers,
+                               data=data,
+                               cookies=cookies,
+                               proxy=proxy,
+                               allow_redirects=allow_redirects,
+                               recycle=recycle,
+                               encoding=encoding),
+                timeout=timeout
+            )
+        else:
+            response = yield from asyncio.wait_for(
+                self._request(method, url,
+                              params=params,
+                              headers=headers,
+                              data=data,
+                              cookies=cookies,
+                              proxy=proxy,
+                              allow_redirects=allow_redirects,
+                              recycle=recycle,
+                              encoding=encoding),
+                timeout=timeout
+            )
+
+        return response
+
+
+    @asyncio.coroutine
+    def _request(self, method, url,
                 params=None,
                 headers=None,
                 data=None,
@@ -130,14 +175,66 @@ class Session(object):
 
 
     @asyncio.coroutine
+    def _redirect(self, method, url,
+                 params=None,
+                 headers=None,
+                 data=None,
+                 cookies=None,
+                 proxy=None,
+                 allow_redirects=True,
+                 recycle=None,
+                 encoding=None):
+
+        if recycle is None:
+            recycle = self.recycle
+
+        history = []
+        base_url = url
+        redirect_urls = set()
+
+        while True:
+            redirect_urls.add(url)
+            response = yield from self._request(method, url,
+                                                params=params,
+                                                headers=headers,
+                                                data=data,
+                                                cookies=cookies,
+                                                proxy=proxy,
+                                                allow_redirects=allow_redirects,
+                                                recycle=recycle,
+                                                encoding=encoding)
+
+            if not response.headers.get('Location'):
+                response.history = history
+                return response
+
+            # XXX, not store responses in self.history, which could be used by other
+            # coroutines
+
+            location = response.headers['Location']
+            url = urljoin(base_url, location)
+            base_url = url
+
+            if url in redirect_urls:
+                raise RedirectLoop(url)
+
+            history.append(response)
+
+
+    @asyncio.coroutine
     def head(self, url,
              params=None,
              headers=None,
              cookies=None,
              proxy=None,
-             allow_redirects=True,
+             allow_redirects=False,
              recycle=None,
-             encoding=None):
+             encoding=None,
+             timeout=None,
+             loop=None):
+
+        if recycle is None:
+            recycle = self.recycle
 
         response = yield from self.request(
             'HEAD', url,
@@ -147,7 +244,10 @@ class Session(object):
             proxy=proxy,
             allow_redirects=allow_redirects,
             recycle=recycle,
-            encoding=encoding)
+            encoding=encoding,
+            timeout=timeout,
+            loop=loop
+        )
         return response
 
 
@@ -159,7 +259,12 @@ class Session(object):
             proxy=None,
             allow_redirects=True,
             recycle=None,
-            encoding=None):
+            encoding=None,
+            timeout=None,
+            loop=None):
+
+        if recycle is None:
+            recycle = self.recycle
 
         response = yield from self.request(
             'GET', url,
@@ -169,7 +274,10 @@ class Session(object):
             proxy=proxy,
             allow_redirects=allow_redirects,
             recycle=recycle,
-            encoding=encoding)
+            encoding=encoding,
+            timeout=timeout,
+            loop=loop
+        )
         return response
 
 
@@ -182,7 +290,12 @@ class Session(object):
              proxy=None,
              allow_redirects=True,
              recycle=None,
-             encoding=None):
+             encoding=None,
+             timeout=None,
+             loop=None):
+
+        if recycle is None:
+            recycle = self.recycle
 
         response = yield from self.request(
             'POST', url,
@@ -193,7 +306,10 @@ class Session(object):
             proxy=proxy,
             allow_redirects=allow_redirects,
             recycle=recycle,
-            encoding=encoding)
+            encoding=encoding,
+            timeout=timeout,
+            loop=loop
+        )
         return response
 
 
