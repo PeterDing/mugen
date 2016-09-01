@@ -130,7 +130,7 @@ class Request(object):
                 _cookies = []
                 for k in cookies:
                     # TODO, path ?
-                    v = cookies[k].value
+                    v = cookies[k]
                     _cookies.append('{}={};'.format(k, v))
 
                 cookie = 'Cookie: ' + ' '.join(_cookies)
