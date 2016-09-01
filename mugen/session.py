@@ -168,6 +168,7 @@ class Session(object):
 
         # update cookies
         self.cookies.update(response.cookies)
+        response.cookies = self.cookies
 
         conn.close()
 
