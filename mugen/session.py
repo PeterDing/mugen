@@ -230,8 +230,7 @@ class Session(object):
              allow_redirects=False,
              recycle=None,
              encoding=None,
-             timeout=None,
-             loop=None):
+             timeout=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -245,8 +244,7 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout,
-            loop=loop
+            timeout=timeout
         )
         return response
 
@@ -260,8 +258,7 @@ class Session(object):
             allow_redirects=True,
             recycle=None,
             encoding=None,
-            timeout=None,
-            loop=None):
+            timeout=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -275,8 +272,7 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout,
-            loop=loop
+            timeout=timeout
         )
         return response
 
@@ -291,8 +287,7 @@ class Session(object):
              allow_redirects=True,
              recycle=None,
              encoding=None,
-             timeout=None,
-             loop=None):
+             timeout=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -307,8 +302,7 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout,
-            loop=loop
+            timeout=timeout
         )
         return response
 
