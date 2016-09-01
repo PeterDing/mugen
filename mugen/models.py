@@ -5,7 +5,7 @@ import json
 import gzip
 from urllib.parse import urlparse, ParseResult
 
-from http.cookies import SimpleCookie
+from http.cookies import SimpleCookie, Morsel
 from collections import OrderedDict, deque
 
 from mugen.exceptions import NotFindIP
@@ -130,7 +130,10 @@ class Request(object):
                 _cookies = []
                 for k in cookies:
                     # TODO, path ?
-                    v = cookies[k]
+                    if isinstance(cookies[k], Morsel):
+                        v = cookies[k].value
+                    else:
+                        v = cookies[k]
                     _cookies.append('{}={};'.format(k, v))
 
                 cookie = 'Cookie: ' + ' '.join(_cookies)
