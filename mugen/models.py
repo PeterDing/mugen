@@ -297,6 +297,10 @@ class Response(object):
         return self.content.decode(self.encoding)
 
 
+    def json(self):
+        return json.loads(self.text)
+
+
 class DNSCache(Singleton):
     '''
     unless lost dict
