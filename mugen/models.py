@@ -146,9 +146,6 @@ class Request(object):
                 cookie = 'Cookie: ' + ' '.join(_cookies)
                 _headers.append(cookie)
 
-        if self.proxy:
-            _headers.append('Proxy-Connection: Keep-Alive')
-
         # make headers
         for k, v in headers.items():
             _headers.append(k + ': ' + v)
