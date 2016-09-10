@@ -15,10 +15,14 @@ from mugen.models import (
     DNSCache,
     DEFAULT_REDIRECT_LIMIT,
     MAX_CONNECTION_POOL,
-    MAX_POOL_TASKS
+    MAX_POOL_TASKS,
+    MAX_REDIRECTIONS
 )
 from mugen.utils import is_ip
-from mugen.exceptions import RedirectLoop
+from mugen.exceptions import (
+    RedirectLoop,
+    TooManyRedirections
+)
 
 
 class Session(object):
@@ -190,10 +194,13 @@ class Session(object):
             recycle = self.recycle
 
         history = []
+        _URL = url
         base_url = url
         redirect_urls = set()
 
         while True:
+            if len(redirect_urls) > MAX_REDIRECTIONS:
+                raise TooManyRedirections(_URL)
             redirect_urls.add(url)
             response = yield from self._request(method, url,
                                                 params=params,
