@@ -78,15 +78,14 @@ class ConnectionPool(Singleton):
             recycle = self.recycle
 
         ip, port, ssl = key
-        conn = Connection(ip, port, ssl=ssl, pool=self,
-                          recycle=recycle, loop=self.loop)
+        conn = Connection(ip, port, ssl=ssl, recycle=recycle, loop=self.loop)
         return conn
 
 
     def recycle_connection(self, conn):
         logging.debug('[ConnectionPool.recycle_connection]: {}'.format(conn))
 
-        if not conn.stale():
+        if conn.recycle and not conn.stale():
             key = conn.key
             conns = self.__connections[key]
             if len(conns) < self.max_tasks and len(self.__connections) < self.max_pool:

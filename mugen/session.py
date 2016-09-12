@@ -174,7 +174,7 @@ class Session(object):
         self.cookies.update(response.cookies)
         response.cookies = self.cookies
 
-        conn.close()
+        self.connection_pool.recycle_connection(conn)
 
         return response
 

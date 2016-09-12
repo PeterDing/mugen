@@ -5,16 +5,17 @@ from __future__ import unicode_literals, absolute_import
 import logging
 import asyncio
 
+from mugen.exceptions import ConnectionIsStale
+
 
 class Connection(object):
 
-    def __init__(self, ip, port, ssl=False, pool=None, recycle=True, loop=None):
+    def __init__(self, ip, port, ssl=False, recycle=True, loop=None):
         self.ip = ip
         self.port = port
         self.ssl = ssl
         self.key = (ip, port, ssl)
-        self.connection_pool = pool
-        self.recycle = False if pool is None else recycle
+        self.recycle = recycle
         self.loop = loop or asyncio.get_event_loop()
         self.reader = None
         self.writer = None
@@ -48,6 +49,10 @@ class Connection(object):
         # assert self.closed() is not True, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
+        if self.stale():
+            logging.debug('[Connection.read] [Error] [ConnectionIsStale]: {}'.format(self.key))
+            raise ConnectionIsStale('{}'.format(self.key))
+
         if size < 0:
             chuck = yield from self.reader.read(size)
             return chuck
@@ -65,6 +70,10 @@ class Connection(object):
         # assert self.closed() is False, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
+        if self.stale():
+            logging.debug('[Connection.readline] [Error] [ConnectionIsStale]: {}'.format(self.key))
+            raise ConnectionIsStale('{}'.format(self.key))
+
         chuck = yield from self.reader.readline()
 
         logging.debug('[Connection.readline]: {}: size = {}'.format(self.key,
@@ -77,15 +86,11 @@ class Connection(object):
         logging.debug('[Connection.close]: {}, '
                       'recycle: {}'.format(self.key, self.recycle))
 
-        if self.recycle:
-            if not self.stale():
-                self.connection_pool.recycle_connection(self)
-                return None
-
-        self.writer.close()
-        self.connection_pool = self.reader = self.writer = None
-        logging.debug('[Connection.close]: DONE. {}, '
-                      'recycle: {}'.format(self.key, self.recycle))
+        if not self.closed():
+            self.writer.close()
+            self.reader = self.writer = None
+            logging.debug('[Connection.close]: DONE. {}, '
+                        'recycle: {}'.format(self.key, self.recycle))
 
 
     def closed(self):
