@@ -53,6 +53,10 @@ class HTTPAdapter(Singleton):
     def get_response(self, conn):
         response = Response(conn)
         yield from response.receive()
+
+        if response.headers.get('connection') == 'close':
+            conn.recycle = False
+            conn.close()
         return response
 
 
