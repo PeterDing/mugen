@@ -95,7 +95,7 @@ class Request(object):
     def make_request(self):
         host = self.url_parse_result.netloc
         request_line = self.make_request_line()
-        headers = self.make_request_headers(host, self.headers, self.cookies)
+        headers = self.make_request_headers(self.method, host, self.headers, self.cookies)
         data = self.make_request_data(self.data)
 
         # TODO: encoding file
@@ -114,11 +114,14 @@ class Request(object):
         return request_line
 
 
-    def make_request_headers(self, host, headers, cookies):
+    def make_request_headers(self, method, host, headers, cookies):
         _headers = []
 
         if not headers.get('host'):
             _headers.append('Host: ' + host)
+
+        if method.lower() == 'post' and not self.data:
+            _headers.append('Content-Length: 0')
 
         if self.data:
             data = self.make_request_data(self.data)
