@@ -8,6 +8,7 @@ from urllib.parse import urlparse, ParseResult
 from http.cookies import SimpleCookie, Morsel
 from collections import OrderedDict, deque
 
+from mugen.cookies import DictCookie
 from mugen.exceptions import NotFindIP
 from mugen.structures import CaseInsensitiveDict
 from mugen.utils import (
@@ -60,7 +61,7 @@ class Request(object):
         self.proxy = proxy
         self.encoding = encoding
         if cookies is None:
-            self.cookies = SimpleCookie()
+            self.cookies = DictCookie()
         else:
             self.cookies = cookies
 
@@ -130,7 +131,7 @@ class Request(object):
 
         # add cookies
         if cookies:
-            if isinstance(cookies, SimpleCookie):
+            if isinstance(cookies, (DictCookie, SimpleCookie)):
                 _cookies = []
                 for k in cookies:
                     # TODO, path ?
@@ -178,7 +179,7 @@ class HttpResonse(object):
         self.content = b''
         self.encoding = encoding
         if cookies is None:
-            self.cookies = SimpleCookie()
+            self.cookies = DictCookie()
         else:
             self.cookies = cookies
 
@@ -225,7 +226,7 @@ class Response(object):
         self.connection = connection
         self.headers = None
         self.content = None
-        self.cookies = SimpleCookie()
+        self.cookies = DictCookie()
         self.encoding = encoding
         self.status_code = None
         self.history = []
@@ -242,6 +243,7 @@ class Response(object):
 
         conn = self.connection
 
+        # TODO, handle Maximum amount of incoming data to buffer
         content = b''
         while True:
             chuck = yield from conn.readline()

@@ -4,9 +4,9 @@ from __future__ import unicode_literals, absolute_import
 
 import logging
 import asyncio
-from http.cookies import SimpleCookie
 from urllib.parse import urljoin
 
+from mugen.cookies import DictCookie
 from mugen.connection_pool import ConnectionPool
 from mugen.proxy import get_proxy_key
 from mugen.adapters import HTTPAdapter
@@ -40,7 +40,7 @@ class Session(object):
                           max_pool, max_tasks, recycle, encoding))
 
         self.headers = None
-        self.cookies = SimpleCookie()
+        self.cookies = DictCookie()
         self.recycle = recycle
         self.encoding = encoding
 
