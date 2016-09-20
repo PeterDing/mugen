@@ -6,6 +6,7 @@ import logging
 import asyncio
 
 from mugen.exceptions import ConnectionIsStale
+from mugen.models import MAX_CONNECTION_TIMEOUT
 
 
 class Connection(object):
@@ -54,12 +55,14 @@ class Connection(object):
             raise ConnectionIsStale('{}'.format(self.key))
 
         if size < 0:
-            chuck = yield from self.reader.read(size)
+            chuck = yield from asyncio.wait_for(self.reader.read(size),
+                                                timeout=MAX_CONNECTION_TIMEOUT)
             return chuck
         else:
             chucks = b''
             while size:
-                chuck = yield from self.reader.read(size)
+                chuck = yield from asyncio.wait_for(self.reader.read(size),
+                                                    timeout=MAX_CONNECTION_TIMEOUT)
                 size -= len(chuck)
                 chucks += chuck
             return chucks
@@ -74,7 +77,8 @@ class Connection(object):
             logging.debug('[Connection.readline] [Error] [ConnectionIsStale]: {}'.format(self.key))
             raise ConnectionIsStale('{}'.format(self.key))
 
-        chuck = yield from self.reader.readline()
+        chuck = yield from asyncio.wait_for(self.reader.readline(),
+                                            timeout=MAX_CONNECTION_TIMEOUT)
 
         logging.debug('[Connection.readline]: {}: size = {}'.format(self.key,
                                                                     len(chuck)))
