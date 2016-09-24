@@ -60,5 +60,9 @@ class HTTPAdapter(Singleton):
         return response
 
 
+    def closed(self):
+        return self._initiated is None and self.connection_pool is None
+
+
     def close(self):
         self._initiated = self.connection_pool = self.loop = None

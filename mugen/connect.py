@@ -12,6 +12,7 @@ from mugen.models import MAX_CONNECTION_TIMEOUT
 class Connection(object):
 
     def __init__(self, ip, port, ssl=False, recycle=True, loop=None):
+
         self.ip = ip
         self.port = port
         self.ssl = ssl
@@ -23,7 +24,7 @@ class Connection(object):
 
 
     def __repr__(self):
-        return repr(self.key)
+        return '<Connection: {!r}>'.format(self.key)
 
 
     @asyncio.coroutine
@@ -34,6 +35,7 @@ class Connection(object):
                                                             self.port,
                                                             ssl=self.ssl,
                                                             loop=self.loop)
+
         self.reader = reader
         self.writer = writer
 
@@ -91,10 +93,11 @@ class Connection(object):
                       'recycle: {}'.format(self.key, self.recycle))
 
         if not self.closed():
+            self.reader.feed_eof()
             self.writer.close()
             self.reader = self.writer = None
             logging.debug('[Connection.close]: DONE. {}, '
-                        'recycle: {}'.format(self.key, self.recycle))
+                          'recycle: {}'.format(self.key, self.recycle))
 
 
     def closed(self):
@@ -102,4 +105,7 @@ class Connection(object):
 
 
     def stale(self):
-        return self.reader is None or self.reader.at_eof()
+        is_stale = self.reader is None or self.reader.at_eof()
+        if is_stale:
+            logging.debug('[Connection.stale]: {} is stale'.format(self.key))
+        return is_stale

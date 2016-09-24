@@ -16,7 +16,8 @@ from mugen.models import (
     DEFAULT_REDIRECT_LIMIT,
     MAX_CONNECTION_POOL,
     MAX_POOL_TASKS,
-    MAX_REDIRECTIONS
+    MAX_REDIRECTIONS,
+    DEFAULT_ENCODING,
 )
 from mugen.utils import is_ip
 from mugen.exceptions import (
@@ -29,7 +30,7 @@ class Session(object):
 
     def __init__(self,
                  recycle=True,
-                 encoding='utf-8',
+                 encoding=DEFAULT_ENCODING,
                  max_pool=MAX_CONNECTION_POOL,
                  max_tasks=MAX_POOL_TASKS,
                  loop=None):
@@ -65,10 +66,12 @@ class Session(object):
                 cookies=None,
                 proxy=None,
                 allow_redirects=True,
-                recycle=True,
+                recycle=None,
                 encoding=None,
                 timeout=None):
 
+        if recycle is None:
+            recycle = self.recycle
 
         if allow_redirects:
             response = yield from asyncio.wait_for(
@@ -142,7 +145,7 @@ class Session(object):
                           encoding=encoding or self.encoding)
 
         host = request.url_parse_result.netloc
-        ssl = request.url_parse_result.scheme == 'https'
+        ssl = request.url_parse_result.scheme.lower() == 'https'
         port = request.url_parse_result.port
         if not port:
             port = 443 if ssl else 80
@@ -201,6 +204,7 @@ class Session(object):
         while True:
             if len(redirect_urls) > MAX_REDIRECTIONS:
                 raise TooManyRedirections(_URL)
+
             redirect_urls.add(url)
             response = yield from self._request(method, url,
                                                 params=params,
@@ -315,5 +319,22 @@ class Session(object):
         return response
 
 
+    def clear(self):
+        """
+        Reset cookies and headers to empty
+        """
+
+        self.cookies.clear()
+        self.headers = None
+
+
     def close(self):
+        """
+        Close this session, all connections and dns cache will be cleaned.
+        cookies will be set to None
+        """
+
+        # self.adapter.close()   # No sense
+        self.connection_pool.clear()
+        self.dns_cache.clear()
         self.headers = self.cookies = self.dns_cache = None

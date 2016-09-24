@@ -11,8 +11,10 @@ from mugen.connect import Connection
 from mugen.models import (
     Singleton,
     MAX_CONNECTION_POOL,
-    MAX_POOL_TASKS
+    MAX_POOL_TASKS,
+    DEFAULT_RECHECK_INTERNAL
 )
+
 
 
 class ConnectionPool(Singleton):
@@ -24,26 +26,30 @@ class ConnectionPool(Singleton):
                  recycle=True,
                  max_pool=MAX_CONNECTION_POOL,
                  max_tasks=MAX_POOL_TASKS,
+                 recheck_internal=DEFAULT_RECHECK_INTERNAL,
                  loop=None):
 
-        if hasattr(self, '__initiated'):
+        if hasattr(self, '_initiated'):
             return None
 
         logging.debug('instantiate ConnectionPool')
 
-        self.initiated = True
+        self._initiated = True
         self.recycle = recycle
         self.max_pool = max_pool     # overall pool
         self.max_tasks = max_tasks   # per-key limit
         self.loop = loop or asyncio.get_event_loop()
         self.__connections = defaultdict(deque)
         self.__connection_sizes = defaultdict(int)
+        self.__recheck_internal = recheck_internal
+        self.__call_count = 0
 
 
     def __repr__(self):
-        return ', '.join(['{}: {}'.format(key, list(conns))
-                          for key, conns in self.__connections.items()]) \
-            + ' pool_size: {}'.format(len(self.__connections))
+        return ('<ConnectionPool: ' + 'connections: ' + ', '.join(
+            ['{}: {}'.format(key, len(conns))
+                for key, conns in self.__connections.items()])
+             + ' pool_size: {}'.format(len(self.__connections)))
 
 
     def get_connections(self, key):
@@ -51,7 +57,14 @@ class ConnectionPool(Singleton):
 
 
     def get_connection(self, key, recycle=None):
-        logging.debug('[ConnectionPool.get_connection]: {}'.format(key))
+        logging.debug(
+            '[ConnectionPool.get_connection]: '
+            '{}, recycle: {}'.format(key, recycle))
+
+        # recheck connections at each self.__recheck_internal
+        self.__call_count = (self.__call_count + 1) % self.__recheck_internal
+        if self.__call_count == 0:
+            self.recheck_connections()
 
         if recycle is None:
             recycle = self.recycle
@@ -68,11 +81,15 @@ class ConnectionPool(Singleton):
             else:
                 conn.close()
 
-        return self.make_connection(key)
+        if not conns:
+            del self.__connections[key]
+
+        return self.make_connection(key, recycle=recycle)
 
 
     def make_connection(self, key, recycle=None):
-        logging.debug('[ConnectionPool.make_connection]: {}'.format(key))
+        logging.debug('[ConnectionPool.make_connection]'
+                      ': {}, recycle: {}'.format(key, recycle))
 
         if recycle is None:
             recycle = self.recycle
@@ -88,7 +105,8 @@ class ConnectionPool(Singleton):
         if conn.recycle and not conn.stale():
             key = conn.key
             conns = self.__connections[key]
-            if len(conns) < self.max_tasks and len(self.__connections) < self.max_pool:
+            if len(conns) < self.max_tasks and \
+                    len(self.__connections) < self.max_pool:
                 conns.append(conn)
                 self.count_connections(key, 1)
                 return None
@@ -96,7 +114,7 @@ class ConnectionPool(Singleton):
 
 
     def recheck_connections(self):
-        logging.debug('[ConnectionPool.recheck_connections]')
+        logging.debug('[ConnectionPool.recheck_connections]: {!r}'.format(self))
 
         for key in self.__connections:
             conns = self.__connections[key]
@@ -105,6 +123,8 @@ class ConnectionPool(Singleton):
                 conn = conns.popleft()
                 self.count_connections(key, -1)
                 self.recycle_connection(conn)
+            if not conns:
+                del self.__connections[key]
 
 
     def count_connections(self, key, incr):
@@ -115,6 +135,10 @@ class ConnectionPool(Singleton):
 
 
     def clear(self):
+        """
+        Close all connnections
+        """
+
         logging.debug('[ConnectionPool.clear]')
 
         for key in self.__connections:
@@ -127,4 +151,16 @@ class ConnectionPool(Singleton):
             del self.__connections[key]
             del self.__connection_sizes[key]
 
-        self._initiated = self.__connections = self.__connection_sizes = self.loop = None
+
+    def closed(self):
+        return self._initiated is None and self.__connections is None
+
+
+    def close(self):
+        """
+        clear connection_pool and reset the instance to uninitiated
+        """
+
+        self.clear()
+        self._initiated = self.__connections = None
+        self.__connection_sizes = self.loop = None

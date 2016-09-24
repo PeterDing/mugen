@@ -4,6 +4,9 @@ from __future__ import unicode_literals, absolute_import
 
 import re
 
+from mugen.cookies import DictCookie
+from mugen.structures import CaseInsensitiveDict
+
 
 def default_headers():
     return {
@@ -44,3 +47,29 @@ def url_params_encode(params):
 _re_ip = re.compile(r'^(http://|https://|)\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}')
 def is_ip(netloc):
     return _re_ip.search(netloc) is not None
+
+
+def parse_headers(lines):
+    headers = CaseInsensitiveDict()
+    cookies = DictCookie()
+
+    protocol, status_code, ok = lines[0].decode('utf-8').split(' ', 2)
+
+    for line in lines[1:]:
+        line = line.decode('utf-8').strip()
+        if not line:
+            continue
+
+        index = line.find(': ')
+        key = line[:index]
+        value = line[index + 2:]
+
+        if key.lower() == 'set-cookie':
+            cookies.load(value)
+            if headers.get(key):
+                headers[key] += ', ' + value
+        else:
+            headers[key] = value
+
+    return (protocol, status_code, ok), headers, cookies
+

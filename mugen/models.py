@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import asyncio
 import json
 import gzip
@@ -14,6 +15,7 @@ from mugen.structures import CaseInsensitiveDict
 from mugen.utils import (
     default_headers,
     url_params_encode,
+    parse_headers
 )
 
 from httptools import HttpResponseParser
@@ -25,7 +27,9 @@ MAX_REDIRECTIONS = 1000
 MAX_CONNECTION_TIMEOUT = 1 * 60
 DEFAULT_DNS_CACHE_SIZE = 100
 DEFAULT_REDIRECT_LIMIT = 100
+DEFAULT_RECHECK_INTERNAL = 100
 HTTP_VERSION = 'HTTP/1.1'
+DEFAULT_ENCODING = 'utf-8'
 
 
 #
@@ -245,18 +249,23 @@ class Response(object):
         conn = self.connection
 
         # TODO, handle Maximum amount of incoming data to buffer
-        content = b''
+        chucks = b''
         while True:
             chuck = yield from conn.readline()
-            content += chuck
-            if not chuck.strip():
+            chucks += chuck
+            if chuck == b'\r\n':
                 break
 
-        http_response_parser.feed_data(content)
+        http_response_parser.feed_data(chucks)
 
         self.status_code = http_response_parser.get_status_code()
         headers = http_response.headers
         self.headers = headers
+
+        # (protocol, status_code, ok), headers, cookies = parse_headers(chucks)
+        # self.headers = headers
+        # self.status_code = status_code
+        # self.cookies = cookies
 
         # TODO, handle redirect
 
@@ -309,16 +318,18 @@ class Response(object):
 
 
 class DNSCache(Singleton):
-    '''
-    unless lost dict
-    '''
+    """
+    DNS Cache
+    """
 
-    def __init__(self, size=None, loop=None):
-        if hasattr(self, '__initiated'):
+    def __init__(self, size=DEFAULT_DNS_CACHE_SIZE, loop=None):
+        if hasattr(self, '_initiated'):
             return None
 
-        self.__initiated = True
-        self.__size = DEFAULT_DNS_CACHE_SIZE
+        logging.debug('instantiate DNSCache: size: {}'.format(size))
+
+        self._initiated = True
+        self.__size = size
         self.__hosts = OrderedDict()
         self.loop = loop or asyncio.get_event_loop()
 
@@ -366,3 +377,7 @@ class DNSCache(Singleton):
     def limit_cache(self):
         while len(self.__hosts) > self.__size:
             self.__hosts.popitem()
+
+
+    def clear(self):
+        self.__hosts.clear()
