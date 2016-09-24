@@ -16,15 +16,13 @@ version = "0.1.0"
 
 requires = ['httptools']
 
-extensions = []
-
-with open("README.md") as fp:
+with open("README.rst") as fp:
     long_description = fp.read()
 
 setup(
     name="mugen",
     version=version,
-    author="Peter Ding",
+    author="PeterDing",
     author_email="dfhasyt@gmail.com",
     license="Apache 2.0",
 
@@ -42,8 +40,5 @@ setup(
         "Programming Language :: Python :: 3.5",
     ],
 
-    packages=["mugen"],
-    test_suite="runtests.runtests",
-
-    ext_modules=extensions,
+    packages=["mugen"]
 )
