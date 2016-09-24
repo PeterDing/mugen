@@ -12,7 +12,7 @@ except ImportError:
 if sys.version_info < (3, 4, 0):
     raise RuntimeError("mugen requires Python 3.4.0+")
 
-version = "0.1.0"
+version = "0.2.0"
 
 requires = ['httptools']
 
