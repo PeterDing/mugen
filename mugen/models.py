@@ -61,6 +61,8 @@ class Request(object):
         self.method = method.upper()
         self.url = url
         self.params = params or {}
+        if headers is None:
+            headers = {}
         self.headers = CaseInsensitiveDict(headers or default_headers())
         self.data = data
         self.proxy = proxy

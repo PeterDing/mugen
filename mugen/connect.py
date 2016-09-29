@@ -53,7 +53,8 @@ class Connection(object):
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            logging.debug('[Connection.read] [Error] [ConnectionIsStale]: {}'.format(self.key))
+            logging.debug('[Connection.read] [Error] '
+                          '[ConnectionIsStale]: {}'.format(self.key))
             raise ConnectionIsStale('{}'.format(self.key))
 
         if size < 0:
@@ -76,14 +77,15 @@ class Connection(object):
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            logging.debug('[Connection.readline] [Error] [ConnectionIsStale]: {}'.format(self.key))
+            logging.debug('[Connection.readline] [Error] '
+                          '[ConnectionIsStale]: {}'.format(self.key))
             raise ConnectionIsStale('{}'.format(self.key))
 
         chuck = yield from asyncio.wait_for(self.reader.readline(),
                                             timeout=MAX_CONNECTION_TIMEOUT)
 
-        logging.debug('[Connection.readline]: {}: size = {}'.format(self.key,
-                                                                    len(chuck)))
+        logging.debug('[Connection.readline]: '
+                      '{}: size = {}'.format(self.key, len(chuck)))
 
         return chuck
 
