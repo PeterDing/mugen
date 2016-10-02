@@ -302,9 +302,10 @@ class Response(object):
                 body += b''.join(blocks)
             else:
                 # reading until EOF
-                body += yield from conn.read(-1)
+                # body += yield from conn.read(-1)
+                pass
 
-        if self.headers.get('Content-Encoding', '').lower() == 'gzip':
+        if body and self.headers.get('Content-Encoding', '').lower() == 'gzip':
             self.content = gzip.decompress(body)
         else:
             self.content = body
