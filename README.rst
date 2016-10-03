@@ -1,5 +1,5 @@
 Mugen - HTTP for Asynchronous Requests
-=================================
+======================================
 
 Mugen is library for http asynchronous requests.
 
@@ -26,7 +26,7 @@ Mugen is a name from *Samurai Champloo* (サムライチャンプル, 混沌武�
 
 
 Feature Support
---------------
+---------------
 
 -   Keep-Alive & Connection Pooling
 -   DNS cache
