@@ -7,7 +7,8 @@ import asyncio
 
 from mugen.models import (
     Singleton,
-    Response
+    Response,
+    DEFAULT_ENCODING
 )
 # from mugen.connection_pool import ConnectionPool
 
@@ -50,8 +51,8 @@ class HTTPAdapter(Singleton):
 
 
     @asyncio.coroutine
-    def get_response(self, conn):
-        response = Response(conn)
+    def get_response(self, method, conn, encoding=DEFAULT_ENCODING):
+        response = Response(method, conn, encoding=encoding)
         yield from response.receive()
 
         if response.headers.get('connection') == 'close':

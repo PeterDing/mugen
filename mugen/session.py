@@ -130,6 +130,8 @@ class Session(object):
                           cookies,
                           proxy))
 
+        encoding = encoding or self.encoding
+
         if recycle is None:
             recycle = self.recycle
 
@@ -142,7 +144,7 @@ class Session(object):
                           data=data,
                           proxy=proxy,
                           cookies=self.cookies,
-                          encoding=encoding or self.encoding)
+                          encoding=encoding)
 
         host = request.url_parse_result.netloc
         ssl = request.url_parse_result.scheme.lower() == 'https'
@@ -171,7 +173,8 @@ class Session(object):
         # send request
         yield from self.adapter.send_request(conn, request)
 
-        response = yield from self.adapter.get_response(conn)
+        response = yield from self.adapter.get_response(method, conn,
+                                                        encoding=encoding)
 
         # update cookies
         self.cookies.update(response.cookies)

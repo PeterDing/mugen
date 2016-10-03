@@ -229,7 +229,8 @@ class HttpResonse(object):
 
 class Response(object):
 
-    def __init__(self, connection, encoding='utf-8'):
+    def __init__(self, method, connection, encoding='utf-8'):
+        self.method = method
         self.connection = connection
         self.headers = None
         self.content = None
@@ -272,6 +273,10 @@ class Response(object):
         # TODO, handle redirect
 
         body = b''
+        if self.method.lower() == 'head':    # HEAD
+            self.content = body
+            return None
+
         nbytes = headers.get('Content-Length')
         if nbytes:
             nbytes = int(nbytes)
@@ -302,8 +307,7 @@ class Response(object):
                 body += b''.join(blocks)
             else:
                 # reading until EOF
-                # body += yield from conn.read(-1)
-                pass
+                body += yield from conn.read(-1)
 
         if body and self.headers.get('Content-Encoding', '').lower() == 'gzip':
             self.content = gzip.decompress(body)
