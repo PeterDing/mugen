@@ -7,8 +7,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 async def task1():
-    resp = await mugen.post('http://httpbin.org/post')
-    print('json:', resp.json())
+    resp = await mugen.get('http://httpbin.org/cookies/set?k2=v2&k1=v1')
+    print(resp.cookies.get_dict())
+    print(resp.history)
 
 
 loop = asyncio.get_event_loop()

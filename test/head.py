@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 async def task1():
-    resp = await mugen.post('http://httpbin.org/post')
-    print('json:', resp.json())
+    resp = await mugen.head('http://httpbin.org')
+    print(list(resp.headers.items()))
 
 
 loop = asyncio.get_event_loop()
