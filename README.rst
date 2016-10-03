@@ -5,7 +5,9 @@ Mugen is library for http asynchronous requests.
 
 Only running on python 3.4.0+
 
-ok, code demo::
+ok, code demo:
+
+.. code-block:: python
 
     import asyncio
     import mugen
