@@ -49,7 +49,9 @@ class ConnectionPool(Singleton):
         return ('<ConnectionPool: ' + 'connections: ' + ', '.join(
             ['{}: {}'.format(key, len(conns))
                 for key, conns in self.__connections.items()])
-             + ' pool_size: {}'.format(len(self.__connections)))
+             + ' pool_size: {}'.format(len(self.__connections))
+             + '>'
+        )
 
 
     def get_connections(self, key):
@@ -116,7 +118,10 @@ class ConnectionPool(Singleton):
     def recheck_connections(self):
         logging.debug('[ConnectionPool.recheck_connections]: {!r}'.format(self))
 
+        empty_conns = []
         for key in self.__connections:
+            # to ignore "RuntimeError: dictionary changed size during iteration"
+            # when iterating a dictionary
             conns = self.__connections[key]
             conn_num = len(conns)
             for _ in range(conn_num):
@@ -124,7 +129,10 @@ class ConnectionPool(Singleton):
                 self.count_connections(key, -1)
                 self.recycle_connection(conn)
             if not conns:
-                del self.__connections[key]
+                empty_conns.append(key)
+
+        for key in empty_conns:
+            del self.__connections[key]
 
 
     def count_connections(self, key, incr):
@@ -148,8 +156,8 @@ class ConnectionPool(Singleton):
                 self.count_connections(key, -1)
                 conn.recycle = False
                 conn.close()
-            del self.__connections[key]
-            del self.__connection_sizes[key]
+
+        self.__connections.clear()
 
 
     def closed(self):
