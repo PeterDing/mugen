@@ -31,7 +31,7 @@ class HTTPAdapter(Singleton):
 
     @asyncio.coroutine
     def get_connection(self, key, recycle=True):
-        conn = self.connection_pool.get_connection(key, recycle=recycle)
+        conn = yield from self.connection_pool.get_connection(key, recycle=recycle)
         if not conn.reader:
             yield from conn.connect()
         return conn

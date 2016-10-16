@@ -154,8 +154,12 @@ class Session(object):
 
         # handle connection
         key = None
-        if proxy:
+        if proxy and not ssl:
             key = yield from get_proxy_key(proxy, self.dns_cache)
+
+        if not key and proxy and ssl:
+            _key = yield from get_proxy_key(proxy, self.dns_cache)
+            key = (_key[0], _key[1], host)
 
         if not key and is_ip(host):
             ip = host.split(':')[0]
@@ -180,7 +184,8 @@ class Session(object):
         self.cookies.update(response.cookies)
         response.cookies = self.cookies
 
-        self.connection_pool.recycle_connection(conn)
+        if method.lower() != 'connect':
+            self.connection_pool.recycle_connection(conn)
 
         return response
 

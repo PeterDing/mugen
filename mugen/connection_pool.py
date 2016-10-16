@@ -14,6 +14,7 @@ from mugen.models import (
     MAX_POOL_TASKS,
     DEFAULT_RECHECK_INTERNAL
 )
+from mugen.proxy import _make_https_proxy_connection
 
 
 
@@ -58,6 +59,7 @@ class ConnectionPool(Singleton):
         return self.__connections[key]
 
 
+    @asyncio.coroutine
     def get_connection(self, key, recycle=None):
         logging.debug(
             '[ConnectionPool.get_connection]: '
@@ -86,7 +88,11 @@ class ConnectionPool(Singleton):
         if not conns:
             del self.__connections[key]
 
-        return self.make_connection(key, recycle=recycle)
+        if isinstance(key[-1], bool):
+            conn = self.make_connection(key, recycle=recycle)
+        else:
+            conn = yield from _make_https_proxy_connection(key, recycle=recycle)
+        return conn
 
 
     def make_connection(self, key, recycle=None):

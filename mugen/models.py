@@ -15,7 +15,6 @@ from mugen.structures import CaseInsensitiveDict
 from mugen.utils import (
     default_headers,
     url_params_encode,
-    parse_headers
 )
 
 from httptools import HttpResponseParser
@@ -113,12 +112,20 @@ class Request(object):
 
     def make_request_line(self):
         method = self.method
+        host = self.url_parse_result.netloc
+        port = self.url_parse_result.port or 443
         path = self.url_parse_result.path or '/'
         query = self.url_parse_result.query
-        uri = path
-        if query:
-            uri += '?' + query
-        request_line = '{} {} {}'.format(method, uri, HTTP_VERSION)
+
+        if method.lower() == 'connect':
+            request_line = '{} {} {}'.format(method,
+                                             '{}:{}'.format(host, port),
+                                             HTTP_VERSION)
+        else:
+            uri = path
+            if query:
+                uri += '?' + query
+            request_line = '{} {} {}'.format(method, uri, HTTP_VERSION)
         return request_line
 
 
@@ -126,7 +133,7 @@ class Request(object):
         _headers = []
 
         if not headers.get('host'):
-            _headers.append('Host: ' + host)
+            _headers.append('Host: ' + host + (':443' if method.lower() == 'connect' else ''))
 
         if method.lower() == 'post' and not self.data:
             _headers.append('Content-Length: 0')
@@ -307,7 +314,8 @@ class Response(object):
                 body += b''.join(blocks)
             else:
                 # reading until EOF
-                body += yield from conn.read(-1)
+                pass
+                # body += yield from conn.read(-1)
 
         if body and self.headers.get('Content-Encoding', '').lower() == 'gzip':
             self.content = gzip.decompress(body)
