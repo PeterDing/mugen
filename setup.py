@@ -16,9 +16,6 @@ version = "0.3.0"
 
 requires = ['httptools']
 
-with open("README.rst") as fp:
-    long_description = fp.read()
-
 setup(
     name="mugen",
     version=version,
@@ -27,7 +24,6 @@ setup(
     license="Apache 2.0",
 
     description="Mugen is library for http asynchronous requests",
-    long_description=long_description,
     url="http://github.com/PeterDing/mugen",
 
     install_requires=requires,
