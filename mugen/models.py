@@ -3,7 +3,6 @@
 import logging
 import asyncio
 import json
-import gzip
 from urllib.parse import urlparse, ParseResult
 
 from http.cookies import SimpleCookie, Morsel
@@ -15,6 +14,9 @@ from mugen.structures import CaseInsensitiveDict
 from mugen.utils import (
     default_headers,
     url_params_encode,
+    form_encode,
+    decode_gzip,
+    decode_deflate
 )
 
 from httptools import HttpResponseParser
@@ -141,7 +143,8 @@ class Request(object):
         if self.data:
             data = self.make_request_data(self.data)
             _headers.append('Content-Length: {}'.format(len(data.encode('utf-8'))))
-            _headers.append('Content-Type: application/x-www-form-urlencoded')
+            if isinstance(self.data, dict) and not headers.get('Content-Type'):
+                _headers.append('Content-Type: application/x-www-form-urlencoded')
 
         # add cookies
         if cookies:
@@ -177,8 +180,10 @@ class Request(object):
 
         enc_data = None
         if isinstance(data, dict):
-            enc_data = json.dumps(data, ensure_ascii=False)
+            enc_data = form_encode(data)
         elif isinstance(data, str):
+            enc_data = data
+        elif isinstance(data, bytes):
             enc_data = data
         else:
             TypeError('request data must be str or dict, NOT {!r}'.format(data))
@@ -318,7 +323,9 @@ class Response(object):
                 # body += yield from conn.read(-1)
 
         if body and self.headers.get('Content-Encoding', '').lower() == 'gzip':
-            self.content = gzip.decompress(body)
+            self.content = decode_gzip(body)
+        elif body and self.headers.get('Content-Encoding', '').lower() == 'deflate':
+            self.content = decode_deflate(body)
         else:
             self.content = body
 

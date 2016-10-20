@@ -42,7 +42,9 @@ class HTTPAdapter(Singleton):
         request_line, headers, data = request.make_request()
         request_line = request_line.encode('utf-8')
         headers = headers.encode('utf-8')
-        data = data.encode('utf-8') if data else None
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+
         conn.send(request_line + b'\r\n')
         conn.send(headers + b'\r\n')
         conn.send(b'\r\n')

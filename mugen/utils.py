@@ -3,6 +3,9 @@
 from __future__ import unicode_literals, absolute_import
 
 import re
+import gzip
+import zlib
+from urllib.parse import quote as url_quote
 
 from mugen.cookies import DictCookie
 from mugen.structures import CaseInsensitiveDict
@@ -28,6 +31,24 @@ def str_encode(dt, encoding='utf-8'):
         return dt
     else:
         raise TypeError('argument must be str or bytes, NOT {!r}'.format(dt))
+
+
+def form_encode(data):
+    '''
+    form-encode data
+    '''
+
+    assert isinstance(data, dict), 'data must be dict like'
+
+    enc_data = '&'.join(
+        ['{}={}'.format(
+            k, url_quote(
+                v if isinstance(v, str)
+                else json.dumps(v, ensure_ascii=False)
+                )) for k, v in data.items()
+        ]
+    )
+    return enc_data
 
 
 def url_params_encode(params):
@@ -73,3 +94,15 @@ def parse_headers(lines):
 
     return (protocol, status_code, ok), headers, cookies
 
+
+def decode_gzip(content):
+    assert isinstance(content, bytes)
+    return gzip.decompress(content)
+
+
+def decode_deflate(content):
+    assert isinstance(content, bytes)
+    try:
+        return zlib.decompress(content)
+    except Exception:
+        return zlib.decompress(content, -zlib.MAX_WBITS)
