@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import json
 import re
 import gzip
 import zlib
@@ -106,3 +107,15 @@ def decode_deflate(content):
         return zlib.decompress(content)
     except Exception:
         return zlib.decompress(content, -zlib.MAX_WBITS)
+
+
+def find_encoding(content_type):
+    if 'charset' in content_type.lower():
+        chucks = content_type.split(';')
+        for chuck in chucks:
+            if 'charset' in chuck.lower():
+                cks = chuck.split('=')
+                if len(cks) == 1:
+                    return None
+                else:
+                    return cks[-1].strip()

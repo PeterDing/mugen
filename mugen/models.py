@@ -16,7 +16,8 @@ from mugen.utils import (
     url_params_encode,
     form_encode,
     decode_gzip,
-    decode_deflate
+    decode_deflate,
+    find_encoding
 )
 
 from httptools import HttpResponseParser
@@ -328,6 +329,10 @@ class Response(object):
             self.content = decode_deflate(body)
         else:
             self.content = body
+
+        encoding = find_encoding(self.headers.get('Content-Type', ''))
+        if encoding:
+            self.encoding = encoding
 
 
     @property
