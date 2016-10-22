@@ -98,7 +98,7 @@ def request(method, url,
             timeout=None,
             loop=None):
 
-    session = Session(recycle=recycle, loop=loop)
+    session = Session(recycle=recycle, encoding=encoding, loop=loop)
     response = yield from session.request(method, url,
                                           params=params,
                                           headers=headers,
@@ -114,13 +114,13 @@ def request(method, url,
 
 
 def session(recycle=True,
-            encoding='utf-8',
+            encoding=None,
             max_pool=MAX_CONNECTION_POOL,
             max_tasks=MAX_POOL_TASKS,
             loop=None):
 
     return Session(recycle=recycle,
-                   encoding='utf-8',
+                   encoding=encoding,
                    max_pool=max_pool,
                    max_tasks=max_tasks,
                    loop=loop)

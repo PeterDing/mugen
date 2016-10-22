@@ -30,7 +30,7 @@ class Session(object):
 
     def __init__(self,
                  recycle=True,
-                 encoding=DEFAULT_ENCODING,
+                 encoding=None,
                  max_pool=MAX_CONNECTION_POOL,
                  max_tasks=MAX_POOL_TASKS,
                  loop=None):

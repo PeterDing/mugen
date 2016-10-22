@@ -58,7 +58,7 @@ class Request(object):
                  data=None,
                  cookies=None,
                  proxy=None,
-                 encoding='utf-8'):
+                 encoding=None):
 
         self.method = method.upper()
         self.url = url
@@ -194,10 +194,10 @@ class Request(object):
 
 class HttpResonse(object):
 
-    def __init__(self, cookies=None, encoding='utf-8'):
+    def __init__(self, cookies=None, encoding=None):
         self.headers = CaseInsensitiveDict()
         self.content = b''
-        self.encoding = encoding
+        self.encoding = encoding or DEFAULT_ENCODING
         if cookies is None:
             self.cookies = DictCookie()
         else:
@@ -242,7 +242,7 @@ class HttpResonse(object):
 
 class Response(object):
 
-    def __init__(self, method, connection, encoding='utf-8'):
+    def __init__(self, method, connection, encoding=None):
         self.method = method
         self.connection = connection
         self.headers = None
@@ -330,9 +330,10 @@ class Response(object):
         else:
             self.content = body
 
-        encoding = find_encoding(self.headers.get('Content-Type', ''))
-        if encoding:
-            self.encoding = encoding
+        if not self.encoding:
+            encoding = find_encoding(self.headers.get('Content-Type', ''))
+            if encoding:
+                self.encoding = encoding
 
 
     @property
