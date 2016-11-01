@@ -338,7 +338,7 @@ class Response(object):
 
     @property
     def text(self):
-        return self.content.decode(self.encoding)
+        return self.content.decode(self.encoding or DEFAULT_ENCODING)
 
 
     def json(self):
