@@ -146,7 +146,7 @@ class Session(object):
                           cookies=self.cookies,
                           encoding=encoding)
 
-        host = request.url_parse_result.netloc
+        host, *_ = request.url_parse_result.netloc.split(':', 1)
         ssl = request.url_parse_result.scheme.lower() == 'https'
         port = request.url_parse_result.port
         if not port:
