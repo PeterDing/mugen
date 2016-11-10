@@ -331,6 +331,7 @@ class Response(object):
             self.content = body
 
         if not self.encoding:
+            # find charset from content-type
             encoding = find_encoding(self.headers.get('Content-Type', ''))
             if encoding:
                 self.encoding = encoding
@@ -338,7 +339,10 @@ class Response(object):
 
     @property
     def text(self):
-        return self.content.decode(self.encoding or DEFAULT_ENCODING)
+        # TODO, use chardet to detect charset
+        encoding = self.encoding or DEFAULT_ENCODING
+
+        return str(self.content, encoding, errors='replace')
 
 
     def json(self):
