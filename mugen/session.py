@@ -10,6 +10,8 @@ from mugen.cookies import DictCookie
 from mugen.connection_pool import ConnectionPool
 from mugen.proxy import get_proxy_key
 from mugen.adapters import HTTPAdapter
+from mugen.utils import is_ip
+from mugen.structures import CaseInsensitiveDict
 from mugen.models import (
     Request,
     DNSCache,
@@ -19,7 +21,6 @@ from mugen.models import (
     MAX_REDIRECTIONS,
     DEFAULT_ENCODING,
 )
-from mugen.utils import is_ip
 from mugen.exceptions import (
     RedirectLoop,
     TooManyRedirections
@@ -29,6 +30,8 @@ from mugen.exceptions import (
 class Session(object):
 
     def __init__(self,
+                 headers=None,
+                 cookies=None,
                  recycle=True,
                  encoding=None,
                  max_pool=MAX_CONNECTION_POOL,
@@ -40,8 +43,14 @@ class Session(object):
                       'recycle: {}, encoding: {}'.format(
                           max_pool, max_tasks, recycle, encoding))
 
-        self.headers = None
+        self.headers = CaseInsensitiveDict()
+        if headers:
+            self.headers.update(headers)
+
         self.cookies = DictCookie()
+        if cookies:
+            self.cookies = DictCookie.update(cookies)
+
         self.recycle = recycle
         self.encoding = encoding
 
