@@ -113,13 +113,17 @@ def request(method, url,
     return response
 
 
-def session(recycle=True,
+def session(headers=None,
+            cookies=None,
+            recycle=True,
             encoding=None,
             max_pool=MAX_CONNECTION_POOL,
             max_tasks=MAX_POOL_TASKS,
             loop=None):
 
-    return Session(recycle=recycle,
+    return Session(headers=headers,
+                   cookies=cookies,
+                   recycle=recycle,
                    encoding=encoding,
                    max_pool=max_pool,
                    max_tasks=max_tasks,

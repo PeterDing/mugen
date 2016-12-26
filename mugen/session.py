@@ -114,14 +114,14 @@ class Session(object):
 
     @asyncio.coroutine
     def _request(self, method, url,
-                params=None,
-                headers=None,
-                data=None,
-                cookies=None,
-                proxy=None,
-                allow_redirects=True,
-                recycle=None,
-                encoding=None):
+                 params=None,
+                 headers=None,
+                 data=None,
+                 cookies=None,
+                 proxy=None,
+                 allow_redirects=True,
+                 recycle=None,
+                 encoding=None):
 
         logging.debug('[Session.request]: '
                       'method: {}, '
@@ -146,6 +146,9 @@ class Session(object):
 
         if cookies:
             self.cookies.update(cookies)
+
+        if headers is None or not dict(headers):
+            headers = self.headers
 
         request = Request(method, url,
                           params=params,
