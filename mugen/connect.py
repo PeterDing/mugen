@@ -21,6 +21,8 @@ class Connection(object):
         self.loop = loop or asyncio.get_event_loop()
         self.reader = None
         self.writer = None
+        self.ssl_on = False  # For http/socks proxy which need ssl connection
+        self.socks_on = False  # socks proxy which needs to be initiated
 
 
     def __repr__(self):
