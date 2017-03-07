@@ -34,6 +34,7 @@ See, [Documention](https://peterding.github.io/mugen-docs/).
 -   Sessions with Cookie Persistence
 -   Automatic Decompression
 -   Automatic Content Decoding
--   HTTP(S) Proxy Support
+-   HTTP(S)/SOCKS5 Proxy Support
 -   Connection Timeouts
+
 
