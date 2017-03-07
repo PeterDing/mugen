@@ -18,6 +18,7 @@ def head(url,
          recycle=True,
          encoding=None,
          timeout=None,
+         connection=None,
          loop=None):
 
     response = yield from request('HEAD', url,
@@ -29,6 +30,7 @@ def head(url,
                                    recycle=recycle,
                                    encoding=encoding,
                                    timeout=timeout,
+                                   connection=connection,
                                    loop=loop)
     return response
 
@@ -43,6 +45,7 @@ def get(url,
         recycle=True,
         encoding=None,
         timeout=None,
+        connection=None,
         loop=None):
 
     response = yield from request('GET', url,
@@ -54,6 +57,7 @@ def get(url,
                                   recycle=recycle,
                                   encoding=encoding,
                                   timeout=timeout,
+                                  connection=connection,
                                   loop=loop)
     return response
 
@@ -69,6 +73,7 @@ def post(url,
          recycle=True,
          encoding=None,
          timeout=None,
+         connection=None,
          loop=None):
 
     response = yield from request('POST', url,
@@ -81,6 +86,7 @@ def post(url,
                                   recycle=recycle,
                                   encoding=encoding,
                                   timeout=timeout,
+                                  connection=connection,
                                   loop=loop)
     return response
 
@@ -96,6 +102,7 @@ def request(method, url,
             recycle=True,
             encoding=None,
             timeout=None,
+            connection=None,
             loop=None):
 
     session = Session(recycle=recycle, encoding=encoding, loop=loop)
@@ -108,7 +115,8 @@ def request(method, url,
                                           allow_redirects=allow_redirects,
                                           recycle=recycle,
                                           encoding=encoding,
-                                          timeout=timeout)
+                                          timeout=timeout,
+                                          connection=connection)
 
     return response
 

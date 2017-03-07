@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 from mugen.cookies import DictCookie
 from mugen.connection_pool import ConnectionPool
-from mugen.proxy import get_proxy_key
+from mugen.connect import Connection
 from mugen.adapters import HTTPAdapter
 from mugen.utils import is_ip
 from mugen.structures import CaseInsensitiveDict
@@ -77,7 +77,8 @@ class Session(object):
                 allow_redirects=True,
                 recycle=None,
                 encoding=None,
-                timeout=None):
+                timeout=None,
+                connection=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -92,7 +93,8 @@ class Session(object):
                                proxy=proxy,
                                allow_redirects=allow_redirects,
                                recycle=recycle,
-                               encoding=encoding),
+                               encoding=encoding,
+                               connection=connection),
                 timeout=timeout
             )
         else:
@@ -105,7 +107,8 @@ class Session(object):
                               proxy=proxy,
                               allow_redirects=allow_redirects,
                               recycle=recycle,
-                              encoding=encoding),
+                              encoding=encoding,
+                              connection=connection),
                 timeout=timeout
             )
 
@@ -121,7 +124,8 @@ class Session(object):
                  proxy=None,
                  allow_redirects=True,
                  recycle=None,
-                 encoding=None):
+                 encoding=None,
+                 connection=None):
 
         logging.debug('[Session.request]: '
                       'method: {}, '
@@ -158,33 +162,25 @@ class Session(object):
                           cookies=self.cookies,
                           encoding=encoding)
 
-        host, *_ = request.url_parse_result.netloc.split(':', 1)
-        ssl = request.url_parse_result.scheme.lower() == 'https'
-        port = request.url_parse_result.port
-        if not port:
-            port = 443 if ssl else 80
+        # make connection
+        if not connection:
+            host, *_ = request.url_parse_result.netloc.split(':', 1)
+            ssl = request.url_parse_result.scheme.lower() == 'https'
+            port = request.url_parse_result.port
+            if not port:
+                port = 443 if ssl else 80
 
-        # handle connection
-        key = None
-        if proxy and not ssl:
-            key = yield from get_proxy_key(proxy, self.dns_cache)
+            if proxy:
+                conn = yield from self.adapter.generate_proxy_connect(
+                    host, port, ssl, proxy, self.dns_cache, recycle=recycle)
+            else:
+                conn = yield from self.adapter.generate_direct_connect(
+                    host, port, ssl, self.dns_cache, recycle=recycle)
+        else:
+            if not isinstance(connection, Connection):
+                raise TypeError('connection is NOT an instance of Mugen.connect.Connection')
 
-        if not key and proxy and ssl:
-            _key = yield from get_proxy_key(proxy, self.dns_cache)
-            key = (_key[0], _key[1], host)
-
-        if not key and is_ip(host):
-            ip = host.split(':')[0]
-            key = (ip, port, ssl)
-
-        if not key and not ssl:
-            ip, port = yield from self.dns_cache.get(host, port)
-            key = (ip, port, ssl)
-
-        if not key and ssl:
-            key = (host, port, ssl)
-
-        conn = yield from self.adapter.get_connection(key, recycle=recycle)
+            conn = connection
 
         # send request
         yield from self.adapter.send_request(conn, request)
@@ -204,14 +200,15 @@ class Session(object):
 
     @asyncio.coroutine
     def _redirect(self, method, url,
-                 params=None,
-                 headers=None,
-                 data=None,
-                 cookies=None,
-                 proxy=None,
-                 allow_redirects=True,
-                 recycle=None,
-                 encoding=None):
+                  params=None,
+                  headers=None,
+                  data=None,
+                  cookies=None,
+                  proxy=None,
+                  allow_redirects=True,
+                  recycle=None,
+                  encoding=None,
+                  connection=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -234,7 +231,8 @@ class Session(object):
                                                 proxy=proxy,
                                                 allow_redirects=allow_redirects,
                                                 recycle=recycle,
-                                                encoding=encoding)
+                                                encoding=encoding,
+                                                connection=connection)
 
             if not response.headers.get('Location'):
                 response.history = history
@@ -262,7 +260,8 @@ class Session(object):
              allow_redirects=False,
              recycle=None,
              encoding=None,
-             timeout=None):
+             timeout=None,
+             connection=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -276,7 +275,8 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout
+            timeout=timeout,
+            connection=connection
         )
         return response
 
@@ -290,7 +290,8 @@ class Session(object):
             allow_redirects=True,
             recycle=None,
             encoding=None,
-            timeout=None):
+            timeout=None,
+            connection=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -304,7 +305,8 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout
+            timeout=timeout,
+            connection=connection
         )
         return response
 
@@ -319,7 +321,8 @@ class Session(object):
              allow_redirects=True,
              recycle=None,
              encoding=None,
-             timeout=None):
+             timeout=None,
+             connection=None):
 
         if recycle is None:
             recycle = self.recycle
@@ -334,7 +337,8 @@ class Session(object):
             allow_redirects=allow_redirects,
             recycle=recycle,
             encoding=encoding,
-            timeout=timeout
+            timeout=timeout,
+            connection=connection
         )
         return response
 
