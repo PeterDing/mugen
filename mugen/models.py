@@ -17,7 +17,8 @@ from mugen.utils import (
     form_encode,
     decode_gzip,
     decode_deflate,
-    find_encoding
+    find_encoding,
+    is_ip
 )
 
 from httptools import HttpResponseParser
@@ -372,6 +373,9 @@ class DNSCache(Singleton):
 
     @asyncio.coroutine
     def get(self, host, port, uncache=False):
+        if is_ip(host):
+            return host, port
+
         key = (host, port)
         ipaddrs = None
         if uncache:
