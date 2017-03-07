@@ -88,10 +88,7 @@ class ConnectionPool(Singleton):
         if not conns:
             del self.__connections[key]
 
-        if isinstance(key[-1], bool):
-            conn = self.make_connection(key, recycle=recycle)
-        else:
-            conn = yield from _make_https_proxy_connection(key, recycle=recycle)
+        conn = self.make_connection(key, recycle=recycle)
         return conn
 
 
@@ -102,7 +99,7 @@ class ConnectionPool(Singleton):
         if recycle is None:
             recycle = self.recycle
 
-        ip, port, ssl = key
+        ip, port, ssl, *_ = key
         conn = Connection(ip, port, ssl=ssl, recycle=recycle, loop=self.loop)
         return conn
 
