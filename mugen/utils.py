@@ -7,6 +7,7 @@ import re
 import gzip
 import zlib
 from urllib.parse import quote as url_quote
+from urllib.parse import urlparse
 
 from mugen.cookies import DictCookie
 from mugen.structures import CaseInsensitiveDict
@@ -94,6 +95,23 @@ def parse_headers(lines):
             headers[key] = value
 
     return (protocol, status_code, ok), headers, cookies
+
+
+def parse_proxy(proxy_url):
+    parser = urlparse(proxy_url)
+
+    proxy_scheme = parser.scheme
+    if '@' in parser.netloc:
+        user_pwd, host_port = parser.netloc.split('@', 1)
+        proxy_host, pt = host_port.split(':', 1)
+        proxy_port = int(pt)
+        username, password = user_pwd.split(':', 1)
+    else:
+        proxy_host = parser.netloc.split(':')[0]
+        proxy_port = parser.port
+        username = None
+        password = None
+    return proxy_scheme, proxy_host, proxy_port, username, password
 
 
 def decode_gzip(content):
