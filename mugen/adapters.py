@@ -57,17 +57,18 @@ class HTTPAdapter(Singleton):
         proxy_scheme, proxy_host, proxy_port, username, password = parse_proxy(proxy)
 
         proxy_ip, proxy_port = yield from dns_cache.get(proxy_host, proxy_port)
-        if ssl:
-            key = (proxy_ip, proxy_port, False, host)
-        else:
-            key = (proxy_ip, proxy_port, False)
+        key = (proxy_ip, proxy_port, False, host)
 
         if proxy_scheme.lower() == 'http':
+            if not ssl:
+                key = (proxy_ip, proxy_port, False)   # http proxy not needs CONNECT request
             conn = yield from self.generate_http_proxy_connect(
                 key, host, port, ssl, username, password, recycle=recycle)
+
         elif proxy_scheme.lower() == 'socks5':
             conn = yield from self.generate_socks5_proxy_connect(
                 key, host, port, ssl, username, password, recycle=recycle)
+
         else:
             raise UnknownProxyScheme(proxy_scheme)
         return conn
@@ -96,7 +97,6 @@ class HTTPAdapter(Singleton):
 
         socks5_proxy = Socks5Proxy(conn, host, port, ssl, username, password)
         yield from socks5_proxy.init()
-        conn.socks_on = True
         return conn
 
 

@@ -102,6 +102,8 @@ class Socks5Proxy:
         if self.ssl:
             yield from self.connect_ssl()
 
+        self.conn.socks_on = True
+
 
     @asyncio.coroutine
     def auth(self):
