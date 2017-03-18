@@ -2,16 +2,17 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import time
 import logging
 import asyncio
 
 from mugen.exceptions import ConnectionIsStale
-from mugen.models import MAX_CONNECTION_TIMEOUT
+from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
 
 
 class Connection(object):
 
-    def __init__(self, ip, port, ssl=False, recycle=True, loop=None):
+    def __init__(self, ip, port, ssl=False, recycle=True, timeout=None, loop=None):
 
         self.ip = ip
         self.port = port
@@ -23,10 +24,21 @@ class Connection(object):
         self.writer = None
         self.ssl_on = False  # For http/socks proxy which need ssl connection
         self.socks_on = False  # socks proxy which needs to be initiated
+        self.timeout = timeout or MAX_KEEP_ALIVE_TIME
+        self.__last_action = time.time()
 
 
     def __repr__(self):
         return '<Connection: {!r}>'.format(self.key)
+
+
+    def _watch(self):
+        self.__last_action = time.time()
+        return self.__last_action
+
+
+    def is_timeout(self):
+        return time.time() - self.__last_action > self.timeout
 
 
     @asyncio.coroutine
@@ -44,6 +56,7 @@ class Connection(object):
 
     def send(self, data):
         logging.debug('[Connection.send]: {!r}'.format(data))
+        self._watch()
 
         self.writer.write(data)
 
@@ -51,6 +64,7 @@ class Connection(object):
     @asyncio.coroutine
     def read(self, size=-1):
         logging.debug('[Connection.read]: {}: size = {}'.format(self.key, size))
+        self._watch()
         # assert self.closed() is not True, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
