@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import json
 import logging
 import asyncio
-import json
+import socket
 from urllib.parse import urlparse, ParseResult
 
 from http.cookies import SimpleCookie, Morsel
-from collections import OrderedDict, deque
+from collections import OrderedDict
 
 from mugen.cookies import DictCookie
 from mugen.exceptions import NotFindIP
@@ -29,7 +30,7 @@ MAX_POOL_TASKS = 100
 MAX_REDIRECTIONS = 1000
 MAX_CONNECTION_TIMEOUT = 1 * 60
 MAX_KEEP_ALIVE_TIME = 10 * 60
-DEFAULT_DNS_CACHE_SIZE = 100
+DEFAULT_DNS_CACHE_SIZE = 5000
 DEFAULT_REDIRECT_LIMIT = 100
 DEFAULT_RECHECK_INTERNAL = 100
 HTTP_VERSION = 'HTTP/1.1'
@@ -378,37 +379,39 @@ class DNSCache(Singleton):
             return host, port
 
         key = (host, port)
-        ipaddrs = None
         if uncache:
             ipaddrs = yield from self.get_ipaddrs(host, port)
-            ipaddrs = deque(ipaddrs)
+            ipaddr = self.add_host(key, ipaddrs)
         else:
-            ipaddrs = self.__hosts.get(key)
-            if not ipaddrs:
+            ipaddr = self.__hosts.get(key)
+            if not ipaddr:
                 ipaddrs = yield from self.get_ipaddrs(host, port)
-                ipaddrs = deque(ipaddrs)
+                ipaddr = self.add_host(key, ipaddrs)
 
-        assert ipaddrs, NotFindIP(str(key))
-
-        self.add_host(key, ipaddrs)
         self.limit_cache()
 
-        info = ipaddrs.popleft()
-        ipaddrs.append(info)
-        _, _, _, _, (ip, port, *_) = info
+        assert ipaddr, NotFindIP(str(key))
 
+        family, type, proto, canonname, (ip, port, *_) = ipaddr
         return ip, port
 
 
     @asyncio.coroutine
     def get_ipaddrs(self, host, port):
-        ipaddrs = yield from self.loop.getaddrinfo(host, port)
+        ipaddrs = yield from self.loop.getaddrinfo(host, port,
+                                                   proto=socket.IPPROTO_TCP)
         return ipaddrs
 
 
     def add_host(self, key, ipaddrs):
-        self.__hosts[key] = ipaddrs
-        self.__hosts.move_to_end(key, last=False)  # FIFO
+        for ipaddr in ipaddrs:
+            family, type, proto, canonname, (ip, port, *_) = ipaddr
+            if (family == socket.AF_INET
+                and type == socket.SOCK_STREAM
+                and proto == socket.IPPROTO_TCP):
+                self.__hosts[key] = ipaddr
+                self.__hosts.move_to_end(key, last=False)  # FIFO
+                return ipaddr
 
 
     def limit_cache(self):
