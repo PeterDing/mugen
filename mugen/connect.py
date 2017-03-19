@@ -6,8 +6,37 @@ import time
 import logging
 import asyncio
 
+from functools import wraps
+
 from mugen.exceptions import ConnectionIsStale
 from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
+
+
+def async_error_proof(gen):
+    @wraps(gen)
+    @asyncio.coroutine
+    def wrap(self, *args, **kwargs):
+        try:
+            rs = yield from gen(self, *args, **kwargs)
+            return rs
+        except Exception as err:
+            logging.error('[{}]: {}'.format(gen, repr(err)))
+            self.close()
+            raise err
+    return wrap
+
+
+def error_proof(func):
+    @wraps(func)
+    def wrap(self, *args, **kwargs):
+        try:
+            rs = func(self, *args, **kwargs)
+            return rs
+        except Exception as err:
+            logging.error('[{}]: {}'.format(func, repr(err)))
+            self.close()
+            raise err
+    return wrap
 
 
 class Connection(object):
@@ -41,6 +70,7 @@ class Connection(object):
         return time.time() - self.__last_action > self.timeout
 
 
+    @async_error_proof
     @asyncio.coroutine
     def connect(self):
         logging.debug('[Connection.connect]: {}'.format(self.key))
@@ -54,6 +84,7 @@ class Connection(object):
         self.writer = writer
 
 
+    @error_proof
     def send(self, data):
         logging.debug('[Connection.send]: {!r}'.format(data))
         self._watch()
@@ -61,6 +92,7 @@ class Connection(object):
         self.writer.write(data)
 
 
+    @async_error_proof
     @asyncio.coroutine
     def read(self, size=-1):
         logging.debug('[Connection.read]: {}: size = {}'.format(self.key, size))
@@ -87,6 +119,7 @@ class Connection(object):
             return chucks
 
 
+    @async_error_proof
     @asyncio.coroutine
     def readline(self):
         # assert self.closed() is False, 'connection is closed'
