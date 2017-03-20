@@ -11,10 +11,10 @@ from mugen.connect import Connection
 from mugen.models import (
     Singleton,
     MAX_CONNECTION_POOL,
+    MAX_KEEP_ALIVE_TIME,
     MAX_POOL_TASKS,
     DEFAULT_RECHECK_INTERNAL
 )
-from mugen.proxy import _make_https_proxy_connection
 
 
 
@@ -45,6 +45,8 @@ class ConnectionPool(Singleton):
         self.__recheck_internal = recheck_internal
         self.__call_count = 0
 
+        asyncio.ensure_future(self._keep_alive_watcher(), loop=loop)
+
 
     def __repr__(self):
         return ('<ConnectionPool: ' + 'connections: ' + ', '.join(
@@ -55,26 +57,32 @@ class ConnectionPool(Singleton):
         )
 
 
+    @asyncio.coroutine
+    def _keep_alive_watcher(self):
+        # recheck connections for each MAX_KEEP_ALIVE_TIME
+        while True:
+            yield from asyncio.sleep(MAX_KEEP_ALIVE_TIME)
+            try:
+                self.recheck_connections()
+            except Exception as err:
+                logging.error('[ConnectionPool._keep_alive_watcher]: {}'.format(err))
+
+
     def get_connections(self, key):
         return self.__connections[key]
 
 
     @asyncio.coroutine
-    def get_connection(self, key, recycle=None):
+    def get_connection(self, key, recycle=None, timeout=None):
         logging.debug(
             '[ConnectionPool.get_connection]: '
             '{}, recycle: {}'.format(key, recycle))
-
-        # recheck connections at each self.__recheck_internal
-        self.__call_count = (self.__call_count + 1) % self.__recheck_internal
-        if self.__call_count == 0:
-            self.recheck_connections()
 
         if recycle is None:
             recycle = self.recycle
 
         if recycle is False:
-            return self.make_connection(key, recycle=recycle)
+            return self.make_connection(key, recycle=recycle, timeout=timeout)
 
         conns = self.__connections[key]
         while len(conns):
@@ -88,11 +96,11 @@ class ConnectionPool(Singleton):
         if not conns:
             del self.__connections[key]
 
-        conn = self.make_connection(key, recycle=recycle)
+        conn = self.make_connection(key, recycle=recycle, timeout=timeout)
         return conn
 
 
-    def make_connection(self, key, recycle=None):
+    def make_connection(self, key, recycle=None, timeout=None):
         logging.debug('[ConnectionPool.make_connection]'
                       ': {}, recycle: {}'.format(key, recycle))
 
@@ -100,17 +108,21 @@ class ConnectionPool(Singleton):
             recycle = self.recycle
 
         ip, port, ssl, *_ = key
-        conn = Connection(ip, port, ssl=ssl, recycle=recycle, loop=self.loop)
+        conn = Connection(ip, port,
+                          ssl=ssl,
+                          recycle=recycle,
+                          timeout=timeout,
+                          loop=self.loop)
         return conn
 
 
     def recycle_connection(self, conn):
         logging.debug('[ConnectionPool.recycle_connection]: {}'.format(conn))
 
-        if conn.recycle and not conn.stale():
+        if conn.recycle and not conn.stale() and not conn.is_timeout():
             key = conn.key
             conns = self.__connections[key]
-            if len(conns) < self.max_tasks and \
+            if len(conns) < self.max_tasks or \
                     len(self.__connections) < self.max_pool:
                 conns.append(conn)
                 self.count_connections(key, 1)

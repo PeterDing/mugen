@@ -2,16 +2,46 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import time
 import logging
 import asyncio
 
+from functools import wraps
+
 from mugen.exceptions import ConnectionIsStale
-from mugen.models import MAX_CONNECTION_TIMEOUT
+from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
+
+
+def async_error_proof(gen):
+    @wraps(gen)
+    @asyncio.coroutine
+    def wrap(self, *args, **kwargs):
+        try:
+            rs = yield from gen(self, *args, **kwargs)
+            return rs
+        except Exception as err:
+            logging.error('[{}]: {}'.format(gen, repr(err)))
+            self.close()
+            raise err
+    return wrap
+
+
+def error_proof(func):
+    @wraps(func)
+    def wrap(self, *args, **kwargs):
+        try:
+            rs = func(self, *args, **kwargs)
+            return rs
+        except Exception as err:
+            logging.error('[{}]: {}'.format(func, repr(err)))
+            self.close()
+            raise err
+    return wrap
 
 
 class Connection(object):
 
-    def __init__(self, ip, port, ssl=False, recycle=True, loop=None):
+    def __init__(self, ip, port, ssl=False, recycle=True, timeout=None, loop=None):
 
         self.ip = ip
         self.port = port
@@ -23,12 +53,24 @@ class Connection(object):
         self.writer = None
         self.ssl_on = False  # For http/socks proxy which need ssl connection
         self.socks_on = False  # socks proxy which needs to be initiated
+        self.timeout = timeout or MAX_KEEP_ALIVE_TIME
+        self.__last_action = time.time()
 
 
     def __repr__(self):
         return '<Connection: {!r}>'.format(self.key)
 
 
+    def _watch(self):
+        self.__last_action = time.time()
+        return self.__last_action
+
+
+    def is_timeout(self):
+        return time.time() - self.__last_action > self.timeout
+
+
+    @async_error_proof
     @asyncio.coroutine
     def connect(self):
         logging.debug('[Connection.connect]: {}'.format(self.key))
@@ -42,15 +84,19 @@ class Connection(object):
         self.writer = writer
 
 
+    @error_proof
     def send(self, data):
         logging.debug('[Connection.send]: {!r}'.format(data))
+        self._watch()
 
         self.writer.write(data)
 
 
+    @async_error_proof
     @asyncio.coroutine
     def read(self, size=-1):
         logging.debug('[Connection.read]: {}: size = {}'.format(self.key, size))
+        self._watch()
         # assert self.closed() is not True, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
@@ -73,6 +119,7 @@ class Connection(object):
             return chucks
 
 
+    @async_error_proof
     @asyncio.coroutine
     def readline(self):
         # assert self.closed() is False, 'connection is closed'
