@@ -41,12 +41,17 @@ def error_proof(func):
 
 class Connection(object):
 
-    def __init__(self, ip, port, ssl=False, recycle=True, timeout=None, loop=None):
+    def __init__(self, ip, port,
+                 ssl=False,
+                 key=None,
+                 recycle=True,
+                 timeout=None,
+                 loop=None):
 
         self.ip = ip
         self.port = port
         self.ssl = ssl
-        self.key = (ip, port, ssl)
+        self.key = key or (ip, port, ssl)
         self.recycle = recycle
         self.loop = loop or asyncio.get_event_loop()
         self.reader = None
@@ -82,6 +87,16 @@ class Connection(object):
 
         self.reader = reader
         self.writer = writer
+
+
+    @async_error_proof
+    @asyncio.coroutine
+    def ssl_handshake(self, host):
+        transport = self.reader._transport
+        raw_socket = transport.get_extra_info('socket', default=None)
+        # transport.pause_reading()
+        self.reader, self.writer = yield from asyncio.open_connection(
+            ssl=True, sock=raw_socket, server_hostname=host)
 
 
     @error_proof

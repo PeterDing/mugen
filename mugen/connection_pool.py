@@ -110,6 +110,7 @@ class ConnectionPool(Singleton):
         ip, port, ssl, *_ = key
         conn = Connection(ip, port,
                           ssl=ssl,
+                          key=key,
                           recycle=recycle,
                           timeout=timeout,
                           loop=self.loop)

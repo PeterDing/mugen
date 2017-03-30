@@ -62,20 +62,9 @@ def get_http_proxy_key(proxy_url, dns_cache):
 
 @asyncio.coroutine
 def _make_https_proxy_connection(conn, host, port, recycle=None):
-
     yield from mugen.request('CONNECT', 'http://{}'.format(host),
                              recycle=recycle, connection=conn)
-    conn = yield from ssl_handshake(conn, host)
-    return conn
-
-
-@asyncio.coroutine
-def ssl_handshake(conn, host):
-    transport = conn.reader._transport
-    raw_socket = transport.get_extra_info('socket', default=None)
-    # transport.pause_reading()
-    conn.reader, conn.writer = yield from asyncio.open_connection(
-        ssl=True, sock=raw_socket, server_hostname=host)
+    yield from conn.ssl_handshake(host)
     return conn
 
 
@@ -207,5 +196,5 @@ class Socks5Proxy:
     @asyncio.coroutine
     def connect_ssl(self):
         logging.debug('[Socks5Proxy.connect_ssl]: {}'.format(self.conn))
-        yield from ssl_handshake(self.conn, self.dest_host)
+        yield from self.conn.ssl_handshake(self.dest_host)
         self.conn.ssl_on = True
