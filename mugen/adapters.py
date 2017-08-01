@@ -18,6 +18,8 @@ from mugen.models import (
 )
 # from mugen.connection_pool import ConnectionPool
 
+log = logging.getLogger(__name__)
+
 
 class HTTPAdapter(Singleton):
 
@@ -25,8 +27,7 @@ class HTTPAdapter(Singleton):
         if hasattr(self, '_initiated'):
             return None
 
-        logging.debug('instantiate HTTPAdapter: '
-                      'recycle: {}, '.format(recycle))
+        log.debug('instantiate HTTPAdapter: recycle: {}, '.format(recycle))
 
         self._initiated = True
         self.recycle = recycle
@@ -81,7 +82,7 @@ class HTTPAdapter(Singleton):
         conn = yield from self.get_connection(key, recycle=recycle)
 
         if ssl and not conn.ssl_on:
-            logging.debug('[ssl_handshake]: {}'.format(key))
+            log.debug('[ssl_handshake]: {}'.format(key))
             yield from _make_https_proxy_connection(
                 conn, host, port, recycle=recycle)
             conn.ssl_on = True

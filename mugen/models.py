@@ -42,6 +42,8 @@ DEFAULT_ENCODING = 'utf-8'
 #
 DEFAULT_READ_SIZE = 1024
 
+log = logging.getLogger(__name__)
+
 
 class Singleton(object):
 
@@ -361,7 +363,7 @@ class DNSCache(Singleton):
         if hasattr(self, '_initiated'):
             return None
 
-        logging.debug('instantiate DNSCache: size: {}'.format(size))
+        log.debug('instantiate DNSCache: size: {}'.format(size))
 
         self._initiated = True
         self.__size = size

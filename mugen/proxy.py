@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 import mugen
 from mugen.utils import is_ip
 
+log = logging.getLogger(__name__)
+
 
 class GeneralProxyError(Exception): pass
 
@@ -96,7 +98,7 @@ class Socks5Proxy:
 
     @asyncio.coroutine
     def auth(self):
-        logging.debug('[Socks5Proxy.init.auth]: {}'.format(self.conn))
+        log.debug('[Socks5Proxy.init.auth]: {}'.format(self.conn))
 
         # sending the authentication packages we support.
         if self.username and self.password:
@@ -138,7 +140,7 @@ class Socks5Proxy:
 
     @asyncio.coroutine
     def connect(self):
-        logging.debug('[Socks5Proxy.init.connect]: {}'.format(self.conn))
+        log.debug('[Socks5Proxy.init.connect]: {}'.format(self.conn))
 
         cmd = b'\x01' # CONNECT
         # Now we can request the actual connection
@@ -195,6 +197,6 @@ class Socks5Proxy:
 
     @asyncio.coroutine
     def connect_ssl(self):
-        logging.debug('[Socks5Proxy.connect_ssl]: {}'.format(self.conn))
+        log.debug('[Socks5Proxy.connect_ssl]: {}'.format(self.conn))
         yield from self.conn.ssl_handshake(self.dest_host)
         self.conn.ssl_on = True

@@ -11,6 +11,8 @@ from functools import wraps
 from mugen.exceptions import ConnectionIsStale
 from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
 
+log = logging.getLogger(__name__)
+
 
 def async_error_proof(gen):
     @wraps(gen)
@@ -20,7 +22,7 @@ def async_error_proof(gen):
             rs = yield from gen(self, *args, **kwargs)
             return rs
         except Exception as err:
-            logging.error('[{}]: {}'.format(gen, repr(err)))
+            log.error('[{}]: {}'.format(gen, repr(err)))
             self.close()
             raise err
     return wrap
@@ -33,7 +35,7 @@ def error_proof(func):
             rs = func(self, *args, **kwargs)
             return rs
         except Exception as err:
-            logging.error('[{}]: {}'.format(func, repr(err)))
+            log.error('[{}]: {}'.format(func, repr(err)))
             self.close()
             raise err
     return wrap
@@ -78,7 +80,7 @@ class Connection(object):
     @async_error_proof
     @asyncio.coroutine
     def connect(self):
-        logging.debug('[Connection.connect]: {}'.format(self.key))
+        log.debug('[Connection.connect]: {}'.format(self.key))
 
         reader, writer = yield from asyncio.open_connection(self.ip,
                                                             self.port,
@@ -92,6 +94,7 @@ class Connection(object):
     @async_error_proof
     @asyncio.coroutine
     def ssl_handshake(self, host):
+        log.debug('[Connection.ssl_handshake]: {}, {}'.format(self.key, host))
         transport = self.reader._transport
         raw_socket = transport.get_extra_info('socket', default=None)
         # transport.pause_reading()
@@ -101,7 +104,7 @@ class Connection(object):
 
     @error_proof
     def send(self, data):
-        logging.debug('[Connection.send]: {!r}'.format(data))
+        log.debug('[Connection.send]: {!r}'.format(data))
         self._watch()
 
         self.writer.write(data)
@@ -110,14 +113,14 @@ class Connection(object):
     @async_error_proof
     @asyncio.coroutine
     def read(self, size=-1):
-        logging.debug('[Connection.read]: {}: size = {}'.format(self.key, size))
+        log.debug('[Connection.read]: {}: size = {}'.format(self.key, size))
         self._watch()
         # assert self.closed() is not True, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            logging.debug('[Connection.read] [Error] '
-                          '[ConnectionIsStale]: {}'.format(self.key))
+            log.debug('[Connection.read] [Error] '
+                      '[ConnectionIsStale]: {}'.format(self.key))
             raise ConnectionIsStale('{}'.format(self.key))
 
         if size < 0:
@@ -141,29 +144,29 @@ class Connection(object):
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            logging.debug('[Connection.readline] [Error] '
-                          '[ConnectionIsStale]: {}'.format(self.key))
+            log.debug('[Connection.readline] [Error] '
+                      '[ConnectionIsStale]: {}'.format(self.key))
             raise ConnectionIsStale('{}'.format(self.key))
 
         chuck = yield from asyncio.wait_for(self.reader.readline(),
                                             timeout=MAX_CONNECTION_TIMEOUT)
 
-        logging.debug('[Connection.readline]: '
-                      '{}: size = {}'.format(self.key, len(chuck)))
+        log.debug('[Connection.readline]: '
+                  '{}: size = {}'.format(self.key, len(chuck)))
 
         return chuck
 
 
     def close(self):
-        logging.debug('[Connection.close]: {}, '
-                      'recycle: {}'.format(self.key, self.recycle))
+        log.debug('[Connection.close]: {}, '
+                  'recycle: {}'.format(self.key, self.recycle))
 
         if not self.closed():
             self.reader.feed_eof()
             self.writer.close()
             self.reader = self.writer = None
-            logging.debug('[Connection.close]: DONE. {}, '
-                          'recycle: {}'.format(self.key, self.recycle))
+            log.debug('[Connection.close]: DONE. {}, '
+                      'recycle: {}'.format(self.key, self.recycle))
 
 
     def closed(self):
@@ -173,5 +176,5 @@ class Connection(object):
     def stale(self):
         is_stale = self.reader is None or self.reader.at_eof()
         if is_stale:
-            logging.debug('[Connection.stale]: {} is stale'.format(self.key))
+            log.debug('[Connection.stale]: {} is stale'.format(self.key))
         return is_stale

@@ -26,6 +26,8 @@ from mugen.exceptions import (
     TooManyRedirections
 )
 
+log = logging.getLogger(__name__)
+
 
 class Session(object):
 
@@ -38,10 +40,10 @@ class Session(object):
                  max_tasks=MAX_POOL_TASKS,
                  loop=None):
 
-        logging.debug('instantiate Session: '
-                      'max_pool: {}, max_tasks: {}, '
-                      'recycle: {}, encoding: {}'.format(
-                          max_pool, max_tasks, recycle, encoding))
+        log.debug('instantiate Session: '
+                  'max_pool: {}, max_tasks: {}, '
+                  'recycle: {}, encoding: {}'.format(
+                      max_pool, max_tasks, recycle, encoding))
 
         self.headers = CaseInsensitiveDict()
         if headers:
@@ -127,21 +129,21 @@ class Session(object):
                  encoding=None,
                  connection=None):
 
-        logging.debug('[Session.request]: '
-                      'method: {}, '
-                      'url: {}, '
-                      'params: {}, '
-                      'headers: {}, '
-                      'data: {}, '
-                      'cookies: {}, '
-                      'proxy: {}'.format(
-                          method,
-                          url,
-                          params,
-                          headers,
-                          data,
-                          cookies,
-                          proxy))
+        log.debug('[Session.request]: '
+                  'method: {}, '
+                  'url: {}, '
+                  'params: {}, '
+                  'headers: {}, '
+                  'data: {}, '
+                  'cookies: {}, '
+                  'proxy: {}'.format(
+                      method,
+                      url,
+                      params,
+                      headers,
+                      data,
+                      cookies,
+                      proxy))
 
         encoding = encoding or self.encoding
 
