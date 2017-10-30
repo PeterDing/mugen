@@ -184,11 +184,22 @@ class Session(object):
 
             conn = connection
 
-        # send request
-        yield from self.adapter.send_request(conn, request)
+        try:
+            # send request
+            yield from self.adapter.send_request(conn, request)
+        except Exception as err:
+            log.debug('[Session._request]: send_request error, {}'.format(err))
+            self.connection_pool.recycle_connection(conn)
+            raise err
 
-        response = yield from self.adapter.get_response(method, conn,
-                                                        encoding=encoding)
+        try:
+            # receive response
+            response = yield from self.adapter.get_response(
+                method, conn, encoding=encoding)
+        except Exception as err:
+            log.debug('[Session._request]: get_response error, {}'.format(err))
+            self.connection_pool.recycle_connection(conn)
+            raise err
 
         # update cookies
         self.cookies.update(response.cookies)
