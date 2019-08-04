@@ -148,7 +148,7 @@ class Request(object):
 
         if self.data:
             data = self.make_request_data(self.data)
-            _headers.append('Content-Length: {}'.format(len(data.encode('utf-8'))))
+            _headers.append('Content-Length: {}'.format(len(data)))
             if isinstance(self.data, dict) and not headers.get('Content-Type'):
                 _headers.append('Content-Type: application/x-www-form-urlencoded')
 
@@ -188,7 +188,7 @@ class Request(object):
         if isinstance(data, dict):
             enc_data = form_encode(data)
         elif isinstance(data, str):
-            enc_data = data
+            enc_data = bytes(data, 'utf-8')
         elif isinstance(data, bytes):
             enc_data = data
         else:
