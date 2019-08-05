@@ -1,40 +1,34 @@
 ## Mugen - HTTP for Asynchronous Requests
 
-Mugen is library for http asynchronous requests.  
+Mugen is library for http asynchronous requests.
 
-Only running on python 3.4.0+  
+Only running on python 3.4.0+
 
-ok, code demo:  
+ok, code demo:
 
 ```python
-    import asyncio
-    import mugen
+import asyncio
+import mugen
 
-    @asyncio.coroutine
-    def task():
-        url = 'http://www.google.com'
-        resp = yield from mugen.get(url)
-        print(resp.text)
+async def task():
+    url = 'https://www.google.com'
+    resp = await mugen.get(url)
+    print(resp.text)
 
-    loop = asyncio.get_event_loop()
-    asyncio.ensure_future(task())
-    loop.run_forever()
+loop = asyncio.get_event_loop()
+loop.run_until_complete(task())
 ```
 
-See, [Documention](https://peterding.github.io/mugen-docs/).  
+See, [Documention](https://peterding.github.io/mugen-docs/).
 
-
-> Mugen is a name from *Samurai Champloo* (サムライチャンプル, 混沌武士)
-
+> Mugen is a name from _Samurai Champloo_ (サムライチャンプル, 混沌武士)
 
 ### Feature Support
 
--   Keep-Alive & Connection Pooling
--   DNS cache
--   Sessions with Cookie Persistence
--   Automatic Decompression
--   Automatic Content Decoding
--   HTTP(S)/SOCKS5 Proxy Support
--   Connection Timeouts
-
-
+- Keep-Alive & Connection Pooling
+- DNS cache
+- Sessions with Cookie Persistence
+- Automatic Decompression
+- Automatic Content Decoding
+- HTTP(S)/SOCKS5 Proxy Support
+- Connection Timeouts
