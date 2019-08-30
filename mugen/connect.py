@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import re
 import time
 import logging
 import asyncio
@@ -12,6 +13,8 @@ from mugen.exceptions import ConnectionIsStale
 from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
 
 log = logging.getLogger(__name__)
+
+FD_RE = re.compile(r'File descriptor (\d+) is used by transport')
 
 
 def async_error_proof(gen):
@@ -80,15 +83,40 @@ class Connection(object):
     @async_error_proof
     @asyncio.coroutine
     def connect(self):
-        log.debug('[Connection.connect]: {}'.format(self.key))
+        _err = None
+        for _ in range(10):
+            log.debug('[Connection.connect]: {}'.format(self.key))
 
-        reader, writer = yield from asyncio.open_connection(self.ip,
-                                                            self.port,
-                                                            ssl=self.ssl,
-                                                            loop=self.loop)
+            try:
+                reader, writer = yield from asyncio.open_connection(self.ip,
+                                                                    self.port,
+                                                                    ssl=self.ssl,
+                                                                    loop=self.loop)
+            except RuntimeError as err:
+                _err = err
+                log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
+                info = str(err)
 
-        self.reader = reader
-        self.writer = writer
+                # if the fd is used, we remove it
+                m = FD_RE.search(info)
+                if m:
+                    fd = int(m.group(1))
+                    transp = self.loop._transports[fd]
+                    if transp:
+                        transp.close()
+                    del self.loop._transports[fd]
+                else:
+                    raise err
+            except Exception as err:
+                _err = err
+                log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
+                raise err
+
+            self.reader = reader
+            self.writer = writer
+            return
+
+        raise _err
 
 
     @async_error_proof
