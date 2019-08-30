@@ -84,7 +84,7 @@ class Connection(object):
     @asyncio.coroutine
     def connect(self):
         _err = None
-        for _ in range(10):
+        for _ in range(2):
             log.debug('[Connection.connect]: {}'.format(self.key))
 
             try:
