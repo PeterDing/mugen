@@ -189,7 +189,8 @@ class Session(object):
             yield from self.adapter.send_request(conn, request)
         except Exception as err:
             log.debug('[Session._request]: send_request error, {}'.format(err))
-            self.connection_pool.recycle_connection(conn)
+            if method.lower() != 'connect':
+                self.connection_pool.recycle_connection(conn)
             raise err
 
         try:
@@ -198,7 +199,8 @@ class Session(object):
                 method, conn, encoding=encoding)
         except Exception as err:
             log.debug('[Session._request]: get_response error, {}'.format(err))
-            self.connection_pool.recycle_connection(conn)
+            if method.lower() != 'connect':
+                self.connection_pool.recycle_connection(conn)
             raise err
 
         # update cookies
