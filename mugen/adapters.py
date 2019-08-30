@@ -103,16 +103,23 @@ class HTTPAdapter(Singleton):
 
     @asyncio.coroutine
     def get_connection(self, key, recycle=True):
-        for _ in range(20):
+        _err = None
+        for _ in range(2):
             conn = yield from self.connection_pool.get_connection(key, recycle=recycle)
             if not conn.reader:
                 try:
                     yield from conn.connect()
-                except Exception as err:
-                    logger.debug('fail connect to %s, error:', key, err)
+                except RuntimeError as err:
+                    _err = err
                     conn.close()
                     continue
+                except Exception as err:
+                    _err = err
+                    log.debug('Fail connect to %s, error: %s', key, err)
+                    conn.close()
+                    raise err
             return conn
+        raise _err
 
 
     @asyncio.coroutine
