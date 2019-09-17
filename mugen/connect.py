@@ -83,40 +83,34 @@ class Connection(object):
     @async_error_proof
     @asyncio.coroutine
     def connect(self):
-        _err = None
-        for _ in range(2):
-            log.debug('[Connection.connect]: {}'.format(self.key))
+        log.debug('[Connection.connect]: {}'.format(self.key))
 
-            try:
-                reader, writer = yield from asyncio.open_connection(self.ip,
-                                                                    self.port,
-                                                                    ssl=self.ssl,
-                                                                    loop=self.loop)
-            except RuntimeError as err:
-                _err = err
-                log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
-                info = str(err)
+        try:
+            reader, writer = yield from asyncio.open_connection(self.ip,
+                                                                self.port,
+                                                                ssl=self.ssl,
+                                                                loop=self.loop)
+        except RuntimeError as err:
+            log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
+            info = str(err)
 
-                # if the fd is used, we remove it
-                m = FD_RE.search(info)
-                if m:
-                    fd = int(m.group(1))
-                    transp = self.loop._transports[fd]
-                    if transp:
-                        transp.close()
-                    del self.loop._transports[fd]
-                else:
-                    raise err
-            except Exception as err:
-                _err = err
-                log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
-                raise err
+            # if the fd is used, we remove it
+            m = FD_RE.search(info)
+            if m:
+                fd = int(m.group(1))
+                transp = self.loop._transports[fd]
+                if transp:
+                    transp.close()
+                del self.loop._transports[fd]
 
-            self.reader = reader
-            self.writer = writer
-            return
+            raise err
+        except Exception as err:
+            log.error('++ Connection.connect: %s:%s, %s', self.ip, self.port, err)
+            raise err
 
-        raise _err
+        self.reader = reader
+        self.writer = writer
+        return
 
 
     @async_error_proof
