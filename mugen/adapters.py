@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
 import logging
 import asyncio
 
@@ -10,9 +6,7 @@ from mugen.exceptions import UnknownProxyScheme
 from mugen.proxy import _make_https_proxy_connection, Socks5Proxy
 from mugen.models import Singleton, Response, DEFAULT_ENCODING
 
-# from mugen.connection_pool import ConnectionPool
-
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HTTPAdapter(Singleton):
@@ -20,35 +14,35 @@ class HTTPAdapter(Singleton):
         if hasattr(self, "_initiated"):
             return None
 
-        log.debug("instantiate HTTPAdapter: recycle: {}, ".format(recycle))
+        logger.debug("instantiate HTTPAdapter: recycle: {}, ".format(recycle))
 
         self._initiated = True
         self.recycle = recycle
         self.loop = loop or asyncio.get_event_loop()
         self.connection_pool = connection_pool
 
-    @asyncio.coroutine
-    def generate_direct_connect(self, host, port, ssl, dns_cache, recycle=True):
+    async def generate_direct_connect(self, host, port, ssl, dns_cache, recycle=True):
         key = None
         if is_ip(host):
             ip = host.split(":")[0]
             key = (ip, port, ssl)
 
         if not key and not ssl:
-            ip, port = yield from dns_cache.get(host, port)
+            ip, port = await dns_cache.get(host, port)
             key = (ip, port, ssl)
 
         if not key and ssl:
             key = (host, port, ssl)
 
-        conn = yield from self.get_connection(key, recycle=recycle)
+        conn = await self.get_connection(key, recycle=recycle)
         return conn
 
-    @asyncio.coroutine
-    def generate_proxy_connect(self, host, port, ssl, proxy, dns_cache, recycle=True):
+    async def generate_proxy_connect(
+        self, host, port, ssl, proxy, dns_cache, recycle=True
+    ):
         proxy_scheme, proxy_host, proxy_port, username, password = parse_proxy(proxy)
 
-        proxy_ip, proxy_port = yield from dns_cache.get(proxy_host, proxy_port)
+        proxy_ip, proxy_port = await dns_cache.get(proxy_host, proxy_port)
         key = (proxy_ip, proxy_port, False, host)
 
         if proxy_scheme.lower() == "http":
@@ -58,12 +52,12 @@ class HTTPAdapter(Singleton):
                     proxy_port,
                     False,
                 )  # http proxy not needs CONNECT request
-            conn = yield from self.generate_http_proxy_connect(
+            conn = await self.generate_http_proxy_connect(
                 key, host, port, ssl, username, password, recycle=recycle
             )
 
         elif proxy_scheme.lower() == "socks5":
-            conn = yield from self.generate_socks5_proxy_connect(
+            conn = await self.generate_socks5_proxy_connect(
                 key, host, port, ssl, username, password, recycle=recycle
             )
 
@@ -71,46 +65,41 @@ class HTTPAdapter(Singleton):
             raise UnknownProxyScheme(proxy_scheme)
         return conn
 
-    @asyncio.coroutine
-    def generate_http_proxy_connect(
+    async def generate_http_proxy_connect(
         self, key, host, port, ssl, username, password, recycle=True
     ):
-
-        conn = yield from self.get_connection(key, recycle=recycle)
+        conn = await self.get_connection(key, recycle=recycle)
 
         if ssl and not conn.ssl_on:
-            log.debug("[ssl_handshake]: {}".format(key))
-            yield from _make_https_proxy_connection(conn, host, port, recycle=recycle)
+            logger.debug("[ssl_handshake]: {}".format(key))
+            await _make_https_proxy_connection(conn, host, port, recycle=recycle)
             conn.ssl_on = True
         return conn
 
-    def generate_socks5_proxy_connect(
+    async def generate_socks5_proxy_connect(
         self, key, host, port, ssl, username, password, recycle=True
     ):
-
-        conn = yield from self.get_connection(key, recycle=recycle)
+        conn = await self.get_connection(key, recycle=recycle)
         if conn.socks_on:
             return conn
 
         socks5_proxy = Socks5Proxy(conn, host, port, ssl, username, password)
-        yield from socks5_proxy.init()
+        await socks5_proxy.init()
         return conn
 
-    @asyncio.coroutine
-    def get_connection(self, key, recycle=True):
+    async def get_connection(self, key, recycle=True):
         for _ in range(20):
-            conn = yield from self.connection_pool.get_connection(key, recycle=recycle)
+            conn = await self.connection_pool.get_connection(key, recycle=recycle)
             if not conn.reader:
                 try:
-                    yield from conn.connect()
+                    await conn.connect()
                 except Exception as err:
                     logger.debug("fail connect to %s, error:", key, err)
                     conn.close()
                     continue
             return conn
 
-    @asyncio.coroutine
-    def send_request(self, conn, request):
+    async def send_request(self, conn, request):
         request_line, headers, data = request.make_request()
         request_line = request_line.encode("utf-8")
         headers = headers.encode("utf-8")
@@ -123,10 +112,9 @@ class HTTPAdapter(Singleton):
         if data:
             conn.send(data)
 
-    @asyncio.coroutine
-    def get_response(self, method, conn, encoding=DEFAULT_ENCODING):
+    async def get_response(self, method, conn, encoding=DEFAULT_ENCODING):
         response = Response(method, conn, encoding=encoding)
-        yield from response.receive()
+        await response.receive()
 
         if response.headers.get("connection") == "close":
             conn.recycle = False

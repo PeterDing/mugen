@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
-from collections import MutableMapping, OrderedDict
+from collections import OrderedDict
+from collections.abc import MutableMapping
 
 
 class CaseInsensitiveDict(MutableMapping):

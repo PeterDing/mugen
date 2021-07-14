@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
-import asyncio
-
 from mugen.session import Session
 from mugen.models import MAX_CONNECTION_POOL, MAX_POOL_TASKS
 
 
-@asyncio.coroutine
-def head(
+async def head(
     url,
     params=None,
     headers=None,
@@ -23,7 +16,7 @@ def head(
     loop=None,
 ):
 
-    response = yield from request(
+    response = await request(
         "HEAD",
         url,
         params=params,
@@ -40,8 +33,7 @@ def head(
     return response
 
 
-@asyncio.coroutine
-def get(
+async def get(
     url,
     params=None,
     headers=None,
@@ -55,7 +47,7 @@ def get(
     loop=None,
 ):
 
-    response = yield from request(
+    response = await request(
         "GET",
         url,
         params=params,
@@ -72,8 +64,7 @@ def get(
     return response
 
 
-@asyncio.coroutine
-def post(
+async def post(
     url,
     params=None,
     headers=None,
@@ -88,7 +79,7 @@ def post(
     loop=None,
 ):
 
-    response = yield from request(
+    response = await request(
         "POST",
         url,
         params=params,
@@ -106,8 +97,7 @@ def post(
     return response
 
 
-@asyncio.coroutine
-def request(
+async def request(
     method,
     url,
     params=None,
@@ -124,7 +114,7 @@ def request(
 ):
 
     session = Session(recycle=recycle, encoding=encoding, loop=loop)
-    response = yield from session.request(
+    response = await session.request(
         method,
         url,
         params=params,

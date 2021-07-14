@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 import logging
 import asyncio
@@ -37,12 +35,10 @@ HTTP_VERSION = "HTTP/1.1"
 DEFAULT_ENCODING = "utf-8"
 
 
-#
 # https://magic.io/blog/uvloop-blazing-fast-python-networking/
-#
 DEFAULT_READ_SIZE = 1024
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Singleton(object):
@@ -209,9 +205,6 @@ class HttpResonse(object):
         else:
             self.cookies = cookies
 
-    # def on_message_begin(self):
-    # print('on_message_begin')
-
     def on_header(self, name, value):
         name = name.decode(self.encoding)
         value = value.decode(self.encoding)
@@ -222,21 +215,8 @@ class HttpResonse(object):
                 return None
         self.headers[name] = value
 
-    # def on_headers_complete(self):
-    # print(self.headers)
-
     def on_body(self, value):
         self.content += value
-
-    # def on_message_complete(self):
-    # print('on_message_complete')
-
-    # def on_chunk_header(self, headers):
-    # print('on_chunk_header')
-    # return True
-
-    # def on_chunk_complete(self):
-    # print('on_chunk_complete')
 
 
 class Response(object):
@@ -254,8 +234,7 @@ class Response(object):
     def __repr__(self):
         return "<Response [{}]>".format(self.status_code)
 
-    @asyncio.coroutine
-    def receive(self):
+    async def receive(self):
         http_response = HttpResonse(cookies=self.cookies, encoding=self.encoding)
         http_response_parser = HttpResponseParser(http_response)
 
@@ -264,7 +243,7 @@ class Response(object):
         # TODO, handle Maximum amount of incoming data to buffer
         chucks = b""
         while True:
-            chuck = yield from conn.readline()
+            chuck = await conn.readline()
             chucks += chuck
             if chuck == b"\r\n":
                 break
@@ -291,12 +270,12 @@ class Response(object):
         if nbytes:
             nbytes = int(nbytes)
         if nbytes:
-            body += yield from conn.read(nbytes)
+            body += await conn.read(nbytes)
         else:
             if headers.get("Transfer-Encoding") == "chunked":
                 blocks = []
                 while True:
-                    size_header = yield from conn.readline()
+                    size_header = await conn.readline()
                     if not size_header:
                         # logging
                         break
@@ -304,7 +283,7 @@ class Response(object):
                     parts = size_header.split(b";")
                     size = int(parts[0], 16)
                     if size:
-                        block = yield from conn.read(size)
+                        block = await conn.read(size)
                         assert len(block) == size, (
                             "[Response.receive] [Transfer-Encoding]",
                             len(block),
@@ -312,7 +291,7 @@ class Response(object):
                         )
                         blocks.append(block)
 
-                    crlf = yield from conn.readline()
+                    crlf = await conn.readline()
                     assert crlf == b"\r\n", repr(crlf)
                     if not size:
                         break
@@ -321,7 +300,7 @@ class Response(object):
             else:
                 # reading until EOF
                 pass
-                # body += yield from conn.read(-1)
+                # body += await conn.read(-1)
 
         if body and self.headers.get("Content-Encoding", "").lower() == "gzip":
             self.content = decode_gzip(body)
@@ -356,7 +335,7 @@ class DNSCache(Singleton):
         if hasattr(self, "_initiated"):
             return None
 
-        log.debug("instantiate DNSCache: size: {}".format(size))
+        logger.debug("instantiate DNSCache: size: {}".format(size))
 
         self._initiated = True
         self.__size = size
@@ -366,19 +345,18 @@ class DNSCache(Singleton):
     def __repr__(self):
         return repr(dict(self.__hosts))
 
-    @asyncio.coroutine
-    def get(self, host, port, uncache=False):
+    async def get(self, host, port, uncache=False):
         if is_ip(host):
             return host, port
 
         key = (host, port)
         if uncache:
-            ipaddrs = yield from self.get_ipaddrs(host, port)
+            ipaddrs = await self.get_ipaddrs(host, port)
             ipaddr = self.add_host(key, ipaddrs)
         else:
             ipaddr = self.__hosts.get(key)
             if not ipaddr:
-                ipaddrs = yield from self.get_ipaddrs(host, port)
+                ipaddrs = await self.get_ipaddrs(host, port)
                 ipaddr = self.add_host(key, ipaddrs)
 
         self.limit_cache()
@@ -388,9 +366,8 @@ class DNSCache(Singleton):
         family, type, proto, canonname, (ip, port, *_) = ipaddr
         return ip, port
 
-    @asyncio.coroutine
-    def get_ipaddrs(self, host, port):
-        ipaddrs = yield from self.loop.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+    async def get_ipaddrs(self, host, port):
+        ipaddrs = await self.loop.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
         return ipaddrs
 
     def add_host(self, key, ipaddrs):

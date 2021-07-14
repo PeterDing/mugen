@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
 import logging
 import asyncio
 
@@ -16,7 +12,7 @@ from mugen.models import (
     DEFAULT_RECHECK_INTERNAL,
 )
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ConnectionPool(Singleton):
@@ -36,7 +32,7 @@ class ConnectionPool(Singleton):
         if hasattr(self, "_initiated"):
             return None
 
-        log.debug("instantiate ConnectionPool")
+        logger.debug("instantiate ConnectionPool")
 
         self._initiated = True
         self.recycle = recycle
@@ -64,22 +60,23 @@ class ConnectionPool(Singleton):
             + ">"
         )
 
-    @asyncio.coroutine
-    def _keep_alive_watcher(self):
+    def __len__(self) -> int:
+        return len(self.__connections)
+
+    async def _keep_alive_watcher(self):
         # recheck connections for each MAX_KEEP_ALIVE_TIME
         while True:
-            yield from asyncio.sleep(MAX_KEEP_ALIVE_TIME)
+            await asyncio.sleep(MAX_KEEP_ALIVE_TIME)
             try:
                 self.recheck_connections()
             except Exception as err:
-                log.error("[ConnectionPool._keep_alive_watcher]: {}".format(err))
+                logger.error("[ConnectionPool._keep_alive_watcher]: {}".format(err))
 
     def get_connections(self, key):
         return self.__connections[key]
 
-    @asyncio.coroutine
-    def get_connection(self, key, recycle=None, timeout=None):
-        log.debug(
+    async def get_connection(self, key, recycle=None, timeout=None):
+        logger.debug(
             "[ConnectionPool.get_connection]: " "{}, recycle: {}".format(key, recycle)
         )
 
@@ -105,7 +102,7 @@ class ConnectionPool(Singleton):
         return conn
 
     def make_connection(self, key, recycle=None, timeout=None):
-        log.debug(
+        logger.debug(
             "[ConnectionPool.make_connection]" ": {}, recycle: {}".format(key, recycle)
         )
 
@@ -119,7 +116,7 @@ class ConnectionPool(Singleton):
         return conn
 
     def recycle_connection(self, conn):
-        log.debug("[ConnectionPool.recycle_connection]: {}".format(conn))
+        logger.debug("[ConnectionPool.recycle_connection]: {}".format(conn))
 
         if conn.recycle and not conn.stale() and not conn.is_timeout():
             key = conn.key
@@ -131,7 +128,7 @@ class ConnectionPool(Singleton):
         conn.close()
 
     def recheck_connections(self):
-        log.debug("[ConnectionPool.recheck_connections]: {!r}".format(self))
+        logger.debug("[ConnectionPool.recheck_connections]: {!r}".format(self))
 
         empty_conns = []
         for key in self.__connections:
@@ -160,7 +157,7 @@ class ConnectionPool(Singleton):
         Close all connnections
         """
 
-        log.debug("[ConnectionPool.clear]")
+        logger.debug("[ConnectionPool.clear]")
 
         for key in self.__connections:
             conns = self.__connections[key]

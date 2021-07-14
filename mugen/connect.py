@@ -5,24 +5,24 @@ from __future__ import unicode_literals, absolute_import
 import time
 import logging
 import asyncio
+from asyncio import streams
 
 from functools import wraps
 
 from mugen.exceptions import ConnectionIsStale
 from mugen.models import MAX_CONNECTION_TIMEOUT, MAX_KEEP_ALIVE_TIME
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def async_error_proof(gen):
     @wraps(gen)
-    @asyncio.coroutine
-    def wrap(self, *args, **kwargs):
+    async def wrap(self, *args, **kwargs):
         try:
-            rs = yield from gen(self, *args, **kwargs)
+            rs = await gen(self, *args, **kwargs)
             return rs
         except Exception as err:
-            log.error("[{}]: {}".format(gen, repr(err)))
+            logger.error("[{}]: {}".format(gen, repr(err)))
             self.close()
             raise err
 
@@ -36,7 +36,7 @@ def error_proof(func):
             rs = func(self, *args, **kwargs)
             return rs
         except Exception as err:
-            log.error("[{}]: {}".format(func, repr(err)))
+            logger.error("[{}]: {}".format(func, repr(err)))
             self.close()
             raise err
 
@@ -72,58 +72,53 @@ class Connection(object):
         return time.time() - self.__last_action > self.timeout
 
     @async_error_proof
-    @asyncio.coroutine
-    def connect(self):
-        log.debug("[Connection.connect]: {}".format(self.key))
+    async def connect(self):
+        logger.debug(f"[Connection.connect]: {self.key}")
 
-        reader, writer = yield from asyncio.open_connection(
-            self.ip, self.port, ssl=self.ssl, loop=self.loop
-        )
+        reader, writer = await streams.open_connection(self.ip, self.port, ssl=self.ssl)
 
         self.reader = reader
         self.writer = writer
 
     @async_error_proof
-    @asyncio.coroutine
-    def ssl_handshake(self, host):
-        log.debug("[Connection.ssl_handshake]: {}, {}".format(self.key, host))
+    async def ssl_handshake(self, host):
+        logger.debug("[Connection.ssl_handshake]: {}, {}".format(self.key, host))
         transport = self.reader._transport
         raw_socket = transport.get_extra_info("socket", default=None)
         # transport.pause_reading()
-        self.reader, self.writer = yield from asyncio.open_connection(
+        self.reader, self.writer = await asyncio.open_connection(
             ssl=True, sock=raw_socket, server_hostname=host
         )
 
     @error_proof
     def send(self, data):
-        log.debug("[Connection.send]: {!r}".format(data))
+        logger.debug("[Connection.send]: {!r}".format(data))
         self._watch()
 
         self.writer.write(data)
 
     @async_error_proof
-    @asyncio.coroutine
-    def read(self, size=-1):
-        log.debug("[Connection.read]: {}: size = {}".format(self.key, size))
+    async def read(self, size=-1):
+        logger.debug("[Connection.read]: {}: size = {}".format(self.key, size))
         self._watch()
         # assert self.closed() is not True, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            log.debug(
+            logger.debug(
                 "[Connection.read] [Error] " "[ConnectionIsStale]: {}".format(self.key)
             )
             raise ConnectionIsStale("{}".format(self.key))
 
         if size < 0:
-            chuck = yield from asyncio.wait_for(
+            chuck = await asyncio.wait_for(
                 self.reader.read(size), timeout=MAX_CONNECTION_TIMEOUT
             )
             return chuck
         else:
             chucks = b""
             while size:
-                chuck = yield from asyncio.wait_for(
+                chuck = await asyncio.wait_for(
                     self.reader.read(size), timeout=MAX_CONNECTION_TIMEOUT
                 )
                 size -= len(chuck)
@@ -131,30 +126,29 @@ class Connection(object):
             return chucks
 
     @async_error_proof
-    @asyncio.coroutine
-    def readline(self):
+    async def readline(self):
         # assert self.closed() is False, 'connection is closed'
         # assert self.stale() is not True, 'connection is stale'
 
         if self.stale():
-            log.debug(
+            logger.debug(
                 "[Connection.readline] [Error] "
                 "[ConnectionIsStale]: {}".format(self.key)
             )
             raise ConnectionIsStale("{}".format(self.key))
 
-        chuck = yield from asyncio.wait_for(
+        chuck = await asyncio.wait_for(
             self.reader.readline(), timeout=MAX_CONNECTION_TIMEOUT
         )
 
-        log.debug(
+        logger.debug(
             "[Connection.readline]: " "{}: size = {}".format(self.key, len(chuck))
         )
 
         return chuck
 
     def close(self):
-        log.debug(
+        logger.debug(
             "[Connection.close]: {}, " "recycle: {}".format(self.key, self.recycle)
         )
 
@@ -162,7 +156,7 @@ class Connection(object):
             self.reader.feed_eof()
             self.writer.close()
             self.reader = self.writer = None
-            log.debug(
+            logger.debug(
                 "[Connection.close]: DONE. {}, "
                 "recycle: {}".format(self.key, self.recycle)
             )
@@ -173,5 +167,5 @@ class Connection(object):
     def stale(self):
         is_stale = self.reader is None or self.reader.at_eof()
         if is_stale:
-            log.debug("[Connection.stale]: {} is stale".format(self.key))
+            logger.debug("[Connection.stale]: {} is stale".format(self.key))
         return is_stale

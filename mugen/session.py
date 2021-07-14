@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
 import logging
 import asyncio
 from urllib.parse import urljoin
@@ -23,7 +19,7 @@ from mugen.models import (
 )
 from mugen.exceptions import RedirectLoop, TooManyRedirections
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Session(object):
@@ -38,7 +34,7 @@ class Session(object):
         loop=None,
     ):
 
-        log.debug(
+        logger.debug(
             "instantiate Session: "
             "max_pool: {}, max_tasks: {}, "
             "recycle: {}, encoding: {}".format(max_pool, max_tasks, recycle, encoding)
@@ -66,8 +62,7 @@ class Session(object):
         )
         self.dns_cache = DNSCache(loop=self.loop)
 
-    @asyncio.coroutine
-    def request(
+    async def request(
         self,
         method,
         url,
@@ -87,7 +82,7 @@ class Session(object):
             recycle = self.recycle
 
         if allow_redirects:
-            response = yield from asyncio.wait_for(
+            response = await asyncio.wait_for(
                 self._redirect(
                     method,
                     url,
@@ -104,7 +99,7 @@ class Session(object):
                 timeout=timeout,
             )
         else:
-            response = yield from asyncio.wait_for(
+            response = await asyncio.wait_for(
                 self._request(
                     method,
                     url,
@@ -123,8 +118,7 @@ class Session(object):
 
         return response
 
-    @asyncio.coroutine
-    def _request(
+    async def _request(
         self,
         method,
         url,
@@ -139,7 +133,7 @@ class Session(object):
         connection=None,
     ):
 
-        log.debug(
+        logger.debug(
             "[Session.request]: "
             "method: {}, "
             "url: {}, "
@@ -181,11 +175,11 @@ class Session(object):
                 port = 443 if ssl else 80
 
             if proxy:
-                conn = yield from self.adapter.generate_proxy_connect(
+                conn = await self.adapter.generate_proxy_connect(
                     host, port, ssl, proxy, self.dns_cache, recycle=recycle
                 )
             else:
-                conn = yield from self.adapter.generate_direct_connect(
+                conn = await self.adapter.generate_direct_connect(
                     host, port, ssl, self.dns_cache, recycle=recycle
                 )
         else:
@@ -198,19 +192,17 @@ class Session(object):
 
         try:
             # send request
-            yield from self.adapter.send_request(conn, request)
+            await self.adapter.send_request(conn, request)
         except Exception as err:
-            log.debug("[Session._request]: send_request error, {}".format(err))
+            logger.debug("[Session._request]: send_request error, {}".format(err))
             self.connection_pool.recycle_connection(conn)
             raise err
 
         try:
             # receive response
-            response = yield from self.adapter.get_response(
-                method, conn, encoding=encoding
-            )
+            response = await self.adapter.get_response(method, conn, encoding=encoding)
         except Exception as err:
-            log.debug("[Session._request]: get_response error, {}".format(err))
+            logger.debug("[Session._request]: get_response error, {}".format(err))
             self.connection_pool.recycle_connection(conn)
             raise err
 
@@ -223,8 +215,7 @@ class Session(object):
 
         return response
 
-    @asyncio.coroutine
-    def _redirect(
+    async def _redirect(
         self,
         method,
         url,
@@ -252,7 +243,7 @@ class Session(object):
                 raise TooManyRedirections(_URL)
 
             redirect_urls.add(url)
-            response = yield from self._request(
+            response = await self._request(
                 method,
                 url,
                 params=params,
@@ -293,8 +284,7 @@ class Session(object):
 
             history.append(response)
 
-    @asyncio.coroutine
-    def head(
+    async def head(
         self,
         url,
         params=None,
@@ -311,7 +301,7 @@ class Session(object):
         if recycle is None:
             recycle = self.recycle
 
-        response = yield from self.request(
+        response = await self.request(
             "HEAD",
             url,
             params=params,
@@ -326,8 +316,7 @@ class Session(object):
         )
         return response
 
-    @asyncio.coroutine
-    def get(
+    async def get(
         self,
         url,
         params=None,
@@ -344,7 +333,7 @@ class Session(object):
         if recycle is None:
             recycle = self.recycle
 
-        response = yield from self.request(
+        response = await self.request(
             "GET",
             url,
             params=params,
@@ -359,8 +348,7 @@ class Session(object):
         )
         return response
 
-    @asyncio.coroutine
-    def post(
+    async def post(
         self,
         url,
         params=None,
@@ -378,7 +366,7 @@ class Session(object):
         if recycle is None:
             recycle = self.recycle
 
-        response = yield from self.request(
+        response = await self.request(
             "POST",
             url,
             params=params,

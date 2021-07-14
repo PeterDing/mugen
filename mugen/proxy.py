@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
 import logging
-import asyncio
 import socket
 import struct
 
@@ -12,7 +7,7 @@ from urllib.parse import urlparse
 import mugen
 from mugen.utils import is_ip
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class GeneralProxyError(Exception):
@@ -49,8 +44,7 @@ SOCKS5_ERRORS = {
 }
 
 
-@asyncio.coroutine
-def get_http_proxy_key(proxy_url, dns_cache):
+async def get_http_proxy_key(proxy_url, dns_cache):
     urlparser = urlparse(proxy_url)
     # ssl = urlparser.scheme == 'https'
     ssl = False
@@ -64,17 +58,16 @@ def get_http_proxy_key(proxy_url, dns_cache):
     else:
         if not port:
             port = 80
-        ip, port = yield from dns_cache.get(host, port)
+        ip, port = await dns_cache.get(host, port)
         key = (ip, port, ssl)
     return key
 
 
-@asyncio.coroutine
-def _make_https_proxy_connection(conn, host, port, recycle=None):
-    yield from mugen.request(
+async def _make_https_proxy_connection(conn, host, port, recycle=None):
+    await mugen.request(
         "CONNECT", "http://{}".format(host), recycle=recycle, connection=conn
     )
-    yield from conn.ssl_handshake(host)
+    await conn.ssl_handshake(host)
     return conn
 
 
@@ -87,23 +80,21 @@ class Socks5Proxy:
         self.username = username
         self.password = password
 
-    @asyncio.coroutine
-    def init(self):
+    async def init(self):
         # 1. connect to socks server and to authorize
-        yield from self.auth()
+        await self.auth()
 
         # 2. let socks server to connect dest_host
-        yield from self.connect()
+        await self.connect()
 
         # 3. SSL/TLS handshake
         if self.ssl:
-            yield from self.connect_ssl()
+            await self.connect_ssl()
 
         self.conn.socks_on = True
 
-    @asyncio.coroutine
-    def auth(self):
-        log.debug("[Socks5Proxy.init.auth]: {}".format(self.conn))
+    async def auth(self):
+        logger.debug("[Socks5Proxy.init.auth]: {}".format(self.conn))
 
         # sending the authentication packages we support.
         if self.username and self.password:
@@ -112,7 +103,7 @@ class Socks5Proxy:
             # VER, NMETHODS, and at least 1 METHODS
             self.conn.send(b"\x05\x01\x00")
 
-        chosen_auth = yield from self.conn.read(2)
+        chosen_auth = await self.conn.read(2)
 
         if chosen_auth[0:1] != b"\x05":
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
@@ -128,7 +119,7 @@ class Socks5Proxy:
                 + self.password
             )
 
-            auth_status = yield from self.conn.reader.read()
+            auth_status = await self.conn.reader.read()
             if auth_status[0:1] != b"\x01":
                 # Bad response
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
@@ -147,9 +138,8 @@ class Socks5Proxy:
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
         # Otherwise, authentication succeeded
 
-    @asyncio.coroutine
-    def connect(self):
-        log.debug("[Socks5Proxy.init.connect]: {}".format(self.conn))
+    async def connect(self):
+        logger.debug("[Socks5Proxy.init.connect]: {}".format(self.conn))
 
         cmd = b"\x01"  # CONNECT
         # Now we can request the actual connection
@@ -180,7 +170,7 @@ class Socks5Proxy:
                 continue
 
         # Get the response
-        resp = yield from self.conn.read(3)
+        resp = await self.conn.read(3)
         if resp[0:1] != b"\x05":
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
@@ -191,25 +181,24 @@ class Socks5Proxy:
             raise SOCKS5Error("{0:#04x}: {1}".format(status, error))
 
         # Get the bound address/port
-        tp = yield from self.conn.read(1)
+        tp = await self.conn.read(1)
         if tp == b"\x01":
-            chk = yield from self.conn.read(4)
+            chk = await self.conn.read(4)
             addr = socket.inet_ntoa(chk)
         elif tp == b"\x03":
-            length = yield from self.conn.read(1)
-            addr = yield from self.conn.read(ord(length))
+            length = await self.conn.read(1)
+            addr = await self.conn.read(ord(length))
         elif tp == b"\x04":
-            chk = yield from self.conn.read(16)
+            chk = await self.conn.read(16)
             addr = socket.inet_ntop(socket.AF_INET6, chk)
         else:
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
-        pt = yield from self.conn.read(2)
+        pt = await self.conn.read(2)
         port = struct.unpack(">H", pt)[0]
         return addr, port
 
-    @asyncio.coroutine
-    def connect_ssl(self):
-        log.debug("[Socks5Proxy.connect_ssl]: {}".format(self.conn))
-        yield from self.conn.ssl_handshake(self.dest_host)
+    async def connect_ssl(self):
+        logger.debug("[Socks5Proxy.connect_ssl]: {}".format(self.conn))
+        await self.conn.ssl_handshake(self.dest_host)
         self.conn.ssl_on = True
