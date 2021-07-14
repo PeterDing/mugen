@@ -247,6 +247,14 @@ class Session(object):
                                                 encoding=encoding,
                                                 connection=connection)
 
+            response.request = Request(method, url,
+                                       params=params,
+                                       headers=headers,
+                                       data=data,
+                                       proxy=proxy,
+                                       cookies=cookies,
+                                       encoding=encoding)
+
             if not response.headers.get('Location'):
                 response.history = history
                 return response

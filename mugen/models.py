@@ -256,6 +256,7 @@ class Response(object):
         self.encoding = encoding
         self.status_code = None
         self.history = []
+        self.request = None
 
 
     def __repr__(self):
