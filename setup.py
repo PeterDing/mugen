@@ -13,7 +13,7 @@ if sys.version_info < (3, 4, 0):
 
 version = "0.4.4"
 
-requires = ['httptools']
+requires = ["httptools"]
 
 setup(
     name="mugen",
@@ -21,12 +21,9 @@ setup(
     author="PeterDing",
     author_email="dfhasyt@gmail.com",
     license="Apache 2.0",
-
     description="Mugen is library for http asynchronous requests",
     url="http://github.com/PeterDing/mugen",
-
     install_requires=requires,
-
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python",
@@ -34,6 +31,5 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
     ],
-
-    packages=["mugen"]
+    packages=["mugen"],
 )
