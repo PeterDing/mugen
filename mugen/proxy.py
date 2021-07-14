@@ -104,6 +104,7 @@ class Socks5Proxy:
         if self.username and self.password:
             self.conn.send(b'\x05\x02\x00\x02')
         else:
+            # VER, NMETHODS, and at least 1 METHODS
             self.conn.send(b'\x05\x01\x00')
 
         chosen_auth = yield from self.conn.read(2)
