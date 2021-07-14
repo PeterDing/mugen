@@ -15,39 +15,42 @@ from mugen.structures import CaseInsensitiveDict
 
 def default_headers():
     return {
-        'User-Agent': 'mugen',
-        'Accept': '*/*',
-        'Accept-Encoding': 'deflate, gzip',
-        'Connection': 'Keep-Alive',
+        "User-Agent": "mugen",
+        "Accept": "*/*",
+        "Accept-Encoding": "deflate, gzip",
+        "Connection": "Keep-Alive",
     }
 
 
-def str_encode(dt, encoding='utf-8'):
-    '''
+def str_encode(dt, encoding="utf-8"):
+    """
     check dt type, then encoding
-    '''
+    """
 
     if isinstance(dt, str):
         return dt.encode(encoding) if encoding else dt
     elif isinstance(dt, bytes):
         return dt
     else:
-        raise TypeError('argument must be str or bytes, NOT {!r}'.format(dt))
+        raise TypeError("argument must be str or bytes, NOT {!r}".format(dt))
 
 
 def form_encode(data):
-    '''
+    """
     form-encode data
-    '''
+    """
 
-    assert isinstance(data, dict), 'data must be dict like'
+    assert isinstance(data, dict), "data must be dict like"
 
-    enc_data = '&'.join(
-        ['{}={}'.format(
-            k, url_quote(
-                v if isinstance(v, str)
-                else json.dumps(v, ensure_ascii=False)
-                )) for k, v in data.items()
+    enc_data = "&".join(
+        [
+            "{}={}".format(
+                k,
+                url_quote(
+                    v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
+                ),
+            )
+            for k, v in data.items()
         ]
     )
     return enc_data
@@ -61,13 +64,17 @@ def url_params_encode(params):
     elif isinstance(params, dict):
         _params = []
         for k, v in params.items():
-            _params.append(k + '=' + v)
-        return '&'.join(_params)
+            _params.append(k + "=" + v)
+        return "&".join(_params)
     else:
-        raise TypeError('argument must be str or bytes or dict, NOT {!r}'.format(params))
+        raise TypeError(
+            "argument must be str or bytes or dict, NOT {!r}".format(params)
+        )
 
 
-_re_ip = re.compile(r'^(http://|https://|)\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}')
+_re_ip = re.compile(r"^(http://|https://|)\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}")
+
+
 def is_ip(netloc):
     return _re_ip.search(netloc) is not None
 
@@ -76,21 +83,21 @@ def parse_headers(lines):
     headers = CaseInsensitiveDict()
     cookies = DictCookie()
 
-    protocol, status_code, ok = lines[0].decode('utf-8').split(' ', 2)
+    protocol, status_code, ok = lines[0].decode("utf-8").split(" ", 2)
 
     for line in lines[1:]:
-        line = line.decode('utf-8').strip()
+        line = line.decode("utf-8").strip()
         if not line:
             continue
 
-        index = line.find(': ')
+        index = line.find(": ")
         key = line[:index]
-        value = line[index + 2:]
+        value = line[index + 2 :]
 
-        if key.lower() == 'set-cookie':
+        if key.lower() == "set-cookie":
             cookies.load(value)
             if headers.get(key):
-                headers[key] += ', ' + value
+                headers[key] += ", " + value
         else:
             headers[key] = value
 
@@ -101,13 +108,13 @@ def parse_proxy(proxy_url):
     parser = urlparse(proxy_url)
 
     proxy_scheme = parser.scheme
-    if '@' in parser.netloc:
-        user_pwd, host_port = parser.netloc.split('@', 1)
-        proxy_host, pt = host_port.split(':', 1)
+    if "@" in parser.netloc:
+        user_pwd, host_port = parser.netloc.split("@", 1)
+        proxy_host, pt = host_port.split(":", 1)
         proxy_port = int(pt)
-        username, password = user_pwd.split(':', 1)
+        username, password = user_pwd.split(":", 1)
     else:
-        proxy_host = parser.netloc.split(':')[0]
+        proxy_host = parser.netloc.split(":")[0]
         proxy_port = parser.port
         username = None
         password = None
@@ -128,11 +135,11 @@ def decode_deflate(content):
 
 
 def find_encoding(content_type):
-    if 'charset' in content_type.lower():
-        chucks = content_type.split(';')
+    if "charset" in content_type.lower():
+        chucks = content_type.split(";")
         for chuck in chucks:
-            if 'charset' in chuck.lower():
-                cks = chuck.split('=')
+            if "charset" in chuck.lower():
+                cks = chuck.split("=")
                 if len(cks) == 1:
                     return None
                 else:

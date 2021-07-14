@@ -19,7 +19,7 @@ from mugen.utils import (
     decode_gzip,
     decode_deflate,
     find_encoding,
-    is_ip
+    is_ip,
 )
 
 from httptools import HttpResponseParser
@@ -33,8 +33,8 @@ MAX_KEEP_ALIVE_TIME = 10 * 60
 DEFAULT_DNS_CACHE_SIZE = 5000
 DEFAULT_REDIRECT_LIMIT = 100
 DEFAULT_RECHECK_INTERNAL = 100
-HTTP_VERSION = 'HTTP/1.1'
-DEFAULT_ENCODING = 'utf-8'
+HTTP_VERSION = "HTTP/1.1"
+DEFAULT_ENCODING = "utf-8"
 
 
 #
@@ -46,24 +46,26 @@ log = logging.getLogger(__name__)
 
 
 class Singleton(object):
-
     def __new__(cls, *args, **kwargs):
 
-        if not hasattr(cls, '_instance'):
+        if not hasattr(cls, "_instance"):
             instance = object.__new__(cls)
             cls._instance = instance
         return cls._instance
 
 
 class Request(object):
-
-    def __init__(self, method, url,
-                 params=None,
-                 headers=None,
-                 data=None,
-                 cookies=None,
-                 proxy=None,
-                 encoding=None):
+    def __init__(
+        self,
+        method,
+        url,
+        params=None,
+        headers=None,
+        data=None,
+        cookies=None,
+        proxy=None,
+        encoding=None,
+    ):
 
         self.method = method.upper()
         self.url = url
@@ -81,7 +83,6 @@ class Request(object):
 
         self.prepare()
 
-
     def prepare(self):
         parser = urlparse(self.url)
 
@@ -94,63 +95,65 @@ class Request(object):
 
         if self.params:
             enc_params = url_params_encode(self.params)
-            query = '{}&{}'.format(query, enc_params)
+            query = "{}&{}".format(query, enc_params)
 
         self.url_parse_result = ParseResult(
-            scheme = scheme or 'http',
-            netloc = host,
-            path = path,
-            params = _params,
-            query = query,
-            fragment = fragment)
+            scheme=scheme or "http",
+            netloc=host,
+            path=path,
+            params=_params,
+            query=query,
+            fragment=fragment,
+        )
 
-        self.ssl = scheme.lower() == 'https'
-
+        self.ssl = scheme.lower() == "https"
 
     def make_request(self):
         host = self.url_parse_result.netloc
         request_line = self.make_request_line()
-        headers = self.make_request_headers(self.method, host, self.headers, self.cookies)
+        headers = self.make_request_headers(
+            self.method, host, self.headers, self.cookies
+        )
         data = self.make_request_data(self.data)
 
         # TODO: encoding file
 
         return request_line, headers, data
 
-
     def make_request_line(self):
         method = self.method
         host = self.url_parse_result.netloc
         port = self.url_parse_result.port or 443
-        path = self.url_parse_result.path or '/'
+        path = self.url_parse_result.path or "/"
         query = self.url_parse_result.query
 
-        if method.lower() == 'connect':
-            request_line = '{} {} {}'.format(method,
-                                             '{}:{}'.format(host, port),
-                                             HTTP_VERSION)
+        if method.lower() == "connect":
+            request_line = "{} {} {}".format(
+                method, "{}:{}".format(host, port), HTTP_VERSION
+            )
         else:
             uri = path
             if query:
-                uri += '?' + query
-            request_line = '{} {} {}'.format(method, uri, HTTP_VERSION)
+                uri += "?" + query
+            request_line = "{} {} {}".format(method, uri, HTTP_VERSION)
         return request_line
-
 
     def make_request_headers(self, method, host, headers, cookies):
         _headers = []
 
-        if not headers.get('host'):
-            _headers.append('Host: ' + host + (':443' if method.lower() == 'connect' else ''))
+        if not headers.get("host"):
+            _headers.append(
+                "Host: " + host + (":443" if method.lower() == "connect" else "")
+            )
 
-        if method.lower() == 'post' and not self.data:
-            _headers.append('Content-Length: 0')
+        if method.lower() == "post" and not self.data:
+            _headers.append("Content-Length: 0")
 
         if self.data:
             data = self.make_request_data(self.data)
-            _headers.append('Content-Length: {}'.format(len(data)))
-            if isinstance(self.data, dict) and not headers.get('Content-Type'):
-                _headers.append('Content-Type: application/x-www-form-urlencoded')
+            _headers.append("Content-Length: {}".format(len(data)))
+            if isinstance(self.data, dict) and not headers.get("Content-Type"):
+                _headers.append("Content-Type: application/x-www-form-urlencoded")
 
         # add cookies
         if cookies:
@@ -162,23 +165,22 @@ class Request(object):
                         v = cookies[k].value
                     else:
                         v = cookies[k]
-                    _cookies.append('{}={};'.format(k, v))
+                    _cookies.append("{}={};".format(k, v))
 
-                cookie = 'Cookie: ' + ' '.join(_cookies)
+                cookie = "Cookie: " + " ".join(_cookies)
                 _headers.append(cookie)
             elif isinstance(cookies, dict):
                 _cookies = []
                 for k, v in cookies.items():
-                    _cookies.append('{}={};'.format(k, v))
+                    _cookies.append("{}={};".format(k, v))
 
-                cookie = 'Cookie: ' + ' '.join(_cookies)
+                cookie = "Cookie: " + " ".join(_cookies)
                 _headers.append(cookie)
 
         # make headers
         for k, v in headers.items():
-            _headers.append(k + ': ' + v)
-        return '\r\n'.join(_headers)
-
+            _headers.append(k + ": " + v)
+        return "\r\n".join(_headers)
 
     def make_request_data(self, data):
         if data is None:
@@ -188,65 +190,56 @@ class Request(object):
         if isinstance(data, dict):
             enc_data = form_encode(data)
         elif isinstance(data, str):
-            enc_data = bytes(data, 'utf-8')
+            enc_data = bytes(data, "utf-8")
         elif isinstance(data, bytes):
             enc_data = data
         else:
-            TypeError('request data must be str or dict, NOT {!r}'.format(data))
+            TypeError("request data must be str or dict, NOT {!r}".format(data))
 
         return enc_data
 
 
 class HttpResonse(object):
-
     def __init__(self, cookies=None, encoding=None):
         self.headers = CaseInsensitiveDict()
-        self.content = b''
+        self.content = b""
         self.encoding = encoding or DEFAULT_ENCODING
         if cookies is None:
             self.cookies = DictCookie()
         else:
             self.cookies = cookies
 
-
     # def on_message_begin(self):
-        # print('on_message_begin')
-
+    # print('on_message_begin')
 
     def on_header(self, name, value):
         name = name.decode(self.encoding)
         value = value.decode(self.encoding)
-        if name.lower() == 'set-cookie':
+        if name.lower() == "set-cookie":
             self.cookies.load(value)
             if self.headers.get(name):
-                self.headers[name] += ', ' + value
+                self.headers[name] += ", " + value
                 return None
         self.headers[name] = value
 
-
     # def on_headers_complete(self):
-        # print(self.headers)
-
+    # print(self.headers)
 
     def on_body(self, value):
         self.content += value
 
-
     # def on_message_complete(self):
-        # print('on_message_complete')
-
+    # print('on_message_complete')
 
     # def on_chunk_header(self, headers):
-        # print('on_chunk_header')
-        # return True
-
+    # print('on_chunk_header')
+    # return True
 
     # def on_chunk_complete(self):
-        # print('on_chunk_complete')
+    # print('on_chunk_complete')
 
 
 class Response(object):
-
     def __init__(self, method, connection, encoding=None):
         self.method = method
         self.connection = connection
@@ -258,10 +251,8 @@ class Response(object):
         self.history = []
         self.request = None
 
-
     def __repr__(self):
-        return '<Response [{}]>'.format(self.status_code)
-
+        return "<Response [{}]>".format(self.status_code)
 
     @asyncio.coroutine
     def receive(self):
@@ -271,11 +262,11 @@ class Response(object):
         conn = self.connection
 
         # TODO, handle Maximum amount of incoming data to buffer
-        chucks = b''
+        chucks = b""
         while True:
             chuck = yield from conn.readline()
             chucks += chuck
-            if chuck == b'\r\n':
+            if chuck == b"\r\n":
                 break
 
         http_response_parser.feed_data(chucks)
@@ -291,18 +282,18 @@ class Response(object):
 
         # TODO, handle redirect
 
-        body = b''
-        if self.method.lower() == 'head':    # HEAD
+        body = b""
+        if self.method.lower() == "head":  # HEAD
             self.content = body
             return None
 
-        nbytes = headers.get('Content-Length')
+        nbytes = headers.get("Content-Length")
         if nbytes:
             nbytes = int(nbytes)
         if nbytes:
             body += yield from conn.read(nbytes)
         else:
-            if headers.get('Transfer-Encoding') == 'chunked':
+            if headers.get("Transfer-Encoding") == "chunked":
                 blocks = []
                 while True:
                     size_header = yield from conn.readline()
@@ -310,46 +301,47 @@ class Response(object):
                         # logging
                         break
 
-                    parts = size_header.split(b';')
+                    parts = size_header.split(b";")
                     size = int(parts[0], 16)
                     if size:
                         block = yield from conn.read(size)
-                        assert len(block) == size, ('[Response.receive] [Transfer-Encoding]',
-                                                    len(block), size)
+                        assert len(block) == size, (
+                            "[Response.receive] [Transfer-Encoding]",
+                            len(block),
+                            size,
+                        )
                         blocks.append(block)
 
                     crlf = yield from conn.readline()
-                    assert crlf == b'\r\n', repr(crlf)
+                    assert crlf == b"\r\n", repr(crlf)
                     if not size:
                         break
 
-                body += b''.join(blocks)
+                body += b"".join(blocks)
             else:
                 # reading until EOF
                 pass
                 # body += yield from conn.read(-1)
 
-        if body and self.headers.get('Content-Encoding', '').lower() == 'gzip':
+        if body and self.headers.get("Content-Encoding", "").lower() == "gzip":
             self.content = decode_gzip(body)
-        elif body and self.headers.get('Content-Encoding', '').lower() == 'deflate':
+        elif body and self.headers.get("Content-Encoding", "").lower() == "deflate":
             self.content = decode_deflate(body)
         else:
             self.content = body
 
         if not self.encoding:
             # find charset from content-type
-            encoding = find_encoding(self.headers.get('Content-Type', ''))
+            encoding = find_encoding(self.headers.get("Content-Type", ""))
             if encoding:
                 self.encoding = encoding
-
 
     @property
     def text(self):
         # TODO, use chardet to detect charset
         encoding = self.encoding or DEFAULT_ENCODING
 
-        return str(self.content, encoding, errors='replace')
-
+        return str(self.content, encoding, errors="replace")
 
     def json(self):
         return json.loads(self.text)
@@ -361,20 +353,18 @@ class DNSCache(Singleton):
     """
 
     def __init__(self, size=DEFAULT_DNS_CACHE_SIZE, loop=None):
-        if hasattr(self, '_initiated'):
+        if hasattr(self, "_initiated"):
             return None
 
-        log.debug('instantiate DNSCache: size: {}'.format(size))
+        log.debug("instantiate DNSCache: size: {}".format(size))
 
         self._initiated = True
         self.__size = size
         self.__hosts = OrderedDict()
         self.loop = loop or asyncio.get_event_loop()
 
-
     def __repr__(self):
         return repr(dict(self.__hosts))
-
 
     @asyncio.coroutine
     def get(self, host, port, uncache=False):
@@ -398,29 +388,26 @@ class DNSCache(Singleton):
         family, type, proto, canonname, (ip, port, *_) = ipaddr
         return ip, port
 
-
     @asyncio.coroutine
     def get_ipaddrs(self, host, port):
-        ipaddrs = yield from self.loop.getaddrinfo(host, port,
-                                                   proto=socket.IPPROTO_TCP)
+        ipaddrs = yield from self.loop.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
         return ipaddrs
-
 
     def add_host(self, key, ipaddrs):
         for ipaddr in ipaddrs:
             family, type, proto, canonname, (ip, port, *_) = ipaddr
-            if (family == socket.AF_INET
+            if (
+                family == socket.AF_INET
                 and type == socket.SOCK_STREAM
-                and proto == socket.IPPROTO_TCP):
+                and proto == socket.IPPROTO_TCP
+            ):
                 self.__hosts[key] = ipaddr
                 self.__hosts.move_to_end(key, last=False)  # FIFO
                 return ipaddr
 
-
     def limit_cache(self):
         while len(self.__hosts) > self.__size:
             self.__hosts.popitem()
-
 
     def clear(self):
         self.__hosts.clear()

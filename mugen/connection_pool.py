@@ -13,33 +13,35 @@ from mugen.models import (
     MAX_CONNECTION_POOL,
     MAX_KEEP_ALIVE_TIME,
     MAX_POOL_TASKS,
-    DEFAULT_RECHECK_INTERNAL
+    DEFAULT_RECHECK_INTERNAL,
 )
 
 log = logging.getLogger(__name__)
 
 
 class ConnectionPool(Singleton):
-    '''
+    """
     recycle is True, restore connections for reuse
-    '''
+    """
 
-    def __init__(self,
-                 recycle=True,
-                 max_pool=MAX_CONNECTION_POOL,
-                 max_tasks=MAX_POOL_TASKS,
-                 recheck_internal=DEFAULT_RECHECK_INTERNAL,
-                 loop=None):
+    def __init__(
+        self,
+        recycle=True,
+        max_pool=MAX_CONNECTION_POOL,
+        max_tasks=MAX_POOL_TASKS,
+        recheck_internal=DEFAULT_RECHECK_INTERNAL,
+        loop=None,
+    ):
 
-        if hasattr(self, '_initiated'):
+        if hasattr(self, "_initiated"):
             return None
 
-        log.debug('instantiate ConnectionPool')
+        log.debug("instantiate ConnectionPool")
 
         self._initiated = True
         self.recycle = recycle
-        self.max_pool = max_pool     # overall pool
-        self.max_tasks = max_tasks   # per-key limit
+        self.max_pool = max_pool  # overall pool
+        self.max_tasks = max_tasks  # per-key limit
         self.loop = loop or asyncio.get_event_loop()
         self.__connections = defaultdict(deque)
         self.__connection_sizes = defaultdict(int)
@@ -48,15 +50,19 @@ class ConnectionPool(Singleton):
 
         asyncio.ensure_future(self._keep_alive_watcher(), loop=loop)
 
-
     def __repr__(self):
-        return ('<ConnectionPool: ' + 'connections: ' + ', '.join(
-            ['{}: {}'.format(key, len(conns))
-                for key, conns in self.__connections.items()])
-             + ' pool_size: {}'.format(len(self.__connections))
-             + '>'
+        return (
+            "<ConnectionPool: "
+            + "connections: "
+            + ", ".join(
+                [
+                    "{}: {}".format(key, len(conns))
+                    for key, conns in self.__connections.items()
+                ]
+            )
+            + " pool_size: {}".format(len(self.__connections))
+            + ">"
         )
-
 
     @asyncio.coroutine
     def _keep_alive_watcher(self):
@@ -66,17 +72,16 @@ class ConnectionPool(Singleton):
             try:
                 self.recheck_connections()
             except Exception as err:
-                log.error('[ConnectionPool._keep_alive_watcher]: {}'.format(err))
-
+                log.error("[ConnectionPool._keep_alive_watcher]: {}".format(err))
 
     def get_connections(self, key):
         return self.__connections[key]
 
-
     @asyncio.coroutine
     def get_connection(self, key, recycle=None, timeout=None):
-        log.debug('[ConnectionPool.get_connection]: '
-                  '{}, recycle: {}'.format(key, recycle))
+        log.debug(
+            "[ConnectionPool.get_connection]: " "{}, recycle: {}".format(key, recycle)
+        )
 
         if recycle is None:
             recycle = self.recycle
@@ -99,40 +104,34 @@ class ConnectionPool(Singleton):
         conn = self.make_connection(key, recycle=recycle, timeout=timeout)
         return conn
 
-
     def make_connection(self, key, recycle=None, timeout=None):
-        log.debug('[ConnectionPool.make_connection]'
-                  ': {}, recycle: {}'.format(key, recycle))
+        log.debug(
+            "[ConnectionPool.make_connection]" ": {}, recycle: {}".format(key, recycle)
+        )
 
         if recycle is None:
             recycle = self.recycle
 
         ip, port, ssl, *_ = key
-        conn = Connection(ip, port,
-                          ssl=ssl,
-                          key=key,
-                          recycle=recycle,
-                          timeout=timeout,
-                          loop=self.loop)
+        conn = Connection(
+            ip, port, ssl=ssl, key=key, recycle=recycle, timeout=timeout, loop=self.loop
+        )
         return conn
 
-
     def recycle_connection(self, conn):
-        log.debug('[ConnectionPool.recycle_connection]: {}'.format(conn))
+        log.debug("[ConnectionPool.recycle_connection]: {}".format(conn))
 
         if conn.recycle and not conn.stale() and not conn.is_timeout():
             key = conn.key
             conns = self.__connections[key]
-            if len(conns) < self.max_tasks or \
-                    len(self.__connections) < self.max_pool:
+            if len(conns) < self.max_tasks or len(self.__connections) < self.max_pool:
                 conns.append(conn)
                 self.count_connections(key, 1)
                 return None
         conn.close()
 
-
     def recheck_connections(self):
-        log.debug('[ConnectionPool.recheck_connections]: {!r}'.format(self))
+        log.debug("[ConnectionPool.recheck_connections]: {!r}".format(self))
 
         empty_conns = []
         for key in self.__connections:
@@ -150,20 +149,18 @@ class ConnectionPool(Singleton):
         for key in empty_conns:
             del self.__connections[key]
 
-
     def count_connections(self, key, incr):
         if self.__connection_sizes[key] > 0:
             self.__connection_sizes[key] += incr
         else:
             del self.__connection_sizes[key]
 
-
     def clear(self):
         """
         Close all connnections
         """
 
-        log.debug('[ConnectionPool.clear]')
+        log.debug("[ConnectionPool.clear]")
 
         for key in self.__connections:
             conns = self.__connections[key]
@@ -175,10 +172,8 @@ class ConnectionPool(Singleton):
 
         self.__connections.clear()
 
-
     def closed(self):
         return self._initiated is None and self.__connections is None
-
 
     def close(self):
         """
