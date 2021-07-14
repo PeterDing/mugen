@@ -4,6 +4,7 @@
 env/
 cover/
 build/
+dist/
 docs/_build
 mugen.egg-info/
 .ropeproject/
