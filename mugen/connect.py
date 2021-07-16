@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, absolute_import
-
+import re
 import time
 import logging
 import asyncio
@@ -43,6 +40,9 @@ def error_proof(func):
     return wrap
 
 
+FD_USED_ERROR = re.compile(r"File descriptor (\d+) is used by transport")
+
+
 class Connection(object):
     def __init__(
         self, ip, port, ssl=False, key=None, recycle=True, timeout=None, loop=None
@@ -75,7 +75,27 @@ class Connection(object):
     async def connect(self):
         logger.debug(f"[Connection.connect]: {self.key}")
 
-        reader, writer = await streams.open_connection(self.ip, self.port, ssl=self.ssl)
+        try:
+            reader, writer = await streams.open_connection(
+                self.ip, self.port, ssl=self.ssl
+            )
+        except RuntimeError as err:
+            logger.error("[Connection.connect]: %s:%s, %s", self.ip, self.port, err)
+            info = str(err)
+
+            # If the fd is used, we remove it
+            m = FD_USED_ERROR.search(info)
+            if m:
+                fd = int(m.group(1))
+                transp = self.loop._transports[fd]
+                if transp:
+                    transp.close()
+                del self.loop._transports[fd]
+
+            raise err
+        except Exception as err:
+            logger.error("[Connection.connect]: %s:%s, %s", self.ip, self.port, err)
+            raise err
 
         self.reader = reader
         self.writer = writer
@@ -86,7 +106,7 @@ class Connection(object):
         transport = self.reader._transport
         raw_socket = transport.get_extra_info("socket", default=None)
         # transport.pause_reading()
-        self.reader, self.writer = await asyncio.open_connection(
+        self.reader, self.writer = await streams.open_connection(
             ssl=True, sock=raw_socket, server_hostname=host
         )
 
@@ -106,7 +126,7 @@ class Connection(object):
 
         if self.stale():
             logger.debug(
-                "[Connection.read] [Error] " "[ConnectionIsStale]: {}".format(self.key)
+                "[Connection.read] [Error] [ConnectionIsStale]: {}".format(self.key)
             )
             raise ConnectionIsStale("{}".format(self.key))
 
@@ -132,8 +152,7 @@ class Connection(object):
 
         if self.stale():
             logger.debug(
-                "[Connection.readline] [Error] "
-                "[ConnectionIsStale]: {}".format(self.key)
+                "[Connection.readline] [Error] [ConnectionIsStale]: {}".format(self.key)
             )
             raise ConnectionIsStale("{}".format(self.key))
 
@@ -157,8 +176,9 @@ class Connection(object):
             self.writer.close()
             self.reader = self.writer = None
             logger.debug(
-                "[Connection.close]: DONE. {}, "
-                "recycle: {}".format(self.key, self.recycle)
+                "[Connection.close]: DONE. {}, recycle: {}".format(
+                    self.key, self.recycle
+                )
             )
 
     def closed(self):
