@@ -88,16 +88,15 @@ class HTTPAdapter(Singleton):
         return conn
 
     async def get_connection(self, key, recycle=True):
-        for _ in range(20):
-            conn = await self.connection_pool.get_connection(key, recycle=recycle)
-            if not conn.reader:
-                try:
-                    await conn.connect()
-                except Exception as err:
-                    logger.debug("fail connect to %s, error:", key, err)
-                    conn.close()
-                    continue
-            return conn
+        conn = await self.connection_pool.get_connection(key, recycle=recycle)
+        if not conn.reader:
+            try:
+                await conn.connect()
+            except Exception as err:
+                logger.debug("Fail connect to %s, error: %s", key, err)
+                conn.close()
+                raise err
+        return conn
 
     async def send_request(self, conn, request):
         request_line, headers, data = request.make_request()
