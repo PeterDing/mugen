@@ -33,7 +33,6 @@ class Session(object):
         max_tasks=MAX_POOL_TASKS,
         loop=None,
     ):
-
         logger.debug(
             "instantiate Session: "
             "max_pool: {}, max_tasks: {}, "
@@ -195,7 +194,8 @@ class Session(object):
             await self.adapter.send_request(conn, request)
         except Exception as err:
             logger.debug("[Session._request]: send_request error, {}".format(err))
-            self.connection_pool.recycle_connection(conn)
+            if method.lower() != "connect":
+                self.connection_pool.recycle_connection(conn)
             raise err
 
         try:
@@ -203,7 +203,8 @@ class Session(object):
             response = await self.adapter.get_response(method, conn, encoding=encoding)
         except Exception as err:
             logger.debug("[Session._request]: get_response error, {}".format(err))
-            self.connection_pool.recycle_connection(conn)
+            if method.lower() != "connect":
+                self.connection_pool.recycle_connection(conn)
             raise err
 
         # update cookies
