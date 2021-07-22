@@ -105,7 +105,6 @@ class Connection(object):
         logger.debug("[Connection.ssl_handshake]: {}, {}".format(self.key, host))
         transport = self.reader._transport
         raw_socket = transport.get_extra_info("socket", default=None)
-        # transport.pause_reading()
         self.reader, self.writer = await streams.open_connection(
             ssl=True, sock=raw_socket, server_hostname=host
         )
