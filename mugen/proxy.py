@@ -1,3 +1,4 @@
+from typing import Optional
 import logging
 import socket
 import struct
@@ -63,9 +64,19 @@ async def get_http_proxy_key(proxy_url, dns_cache):
     return key
 
 
-async def _make_https_proxy_connection(conn, host, port, recycle=None):
+async def _make_https_proxy_connection(
+    conn,
+    host,
+    port,
+    proxy_auth: Optional[str] = None,
+    recycle=None,
+):
+    url = "https://" + host
+    if port:
+        url = url + f":{port}"
+
     await mugen.request(
-        "CONNECT", "http://{}".format(host), recycle=recycle, connection=conn
+        "CONNECT", url, recycle=recycle, proxy_auth=proxy_auth, connection=conn
     )
     await conn.ssl_handshake(host)
     return conn
