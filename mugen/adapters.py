@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class HTTPAdapter(Singleton):
     def __init__(self, connection_pool, recycle=True, loop=None):
         if hasattr(self, "_initiated"):
-            return None
+            return
 
         logger.debug("instantiate HTTPAdapter: recycle: {}, ".format(recycle))
 
@@ -38,9 +38,11 @@ class HTTPAdapter(Singleton):
         return conn
 
     async def generate_proxy_connect(
-        self, host, port, ssl, proxy, dns_cache, recycle=True
+        self, host, port, ssl, proxy, proxy_auth, dns_cache, recycle=True
     ):
         proxy_scheme, proxy_host, proxy_port, username, password = parse_proxy(proxy)
+        if not proxy_auth and username and password:
+            proxy_auth = f"{username}:{password}"
 
         proxy_ip, proxy_port = await dns_cache.get(proxy_host, proxy_port)
         key = (proxy_ip, proxy_port, False, host)
@@ -53,26 +55,27 @@ class HTTPAdapter(Singleton):
                     False,
                 )  # http proxy not needs CONNECT request
             conn = await self.generate_http_proxy_connect(
-                key, host, port, ssl, username, password, recycle=recycle
+                key, host, port, ssl, proxy_auth, recycle=recycle
             )
-
         elif proxy_scheme.lower() == "socks5":
             conn = await self.generate_socks5_proxy_connect(
                 key, host, port, ssl, username, password, recycle=recycle
             )
-
         else:
             raise UnknownProxyScheme(proxy_scheme)
+
         return conn
 
     async def generate_http_proxy_connect(
-        self, key, host, port, ssl, username, password, recycle=True
+        self, key, host, port, ssl, proxy_auth, recycle=True
     ):
         conn = await self.get_connection(key, recycle=recycle)
 
         if ssl and not conn.ssl_on:
             logger.debug("[ssl_handshake]: {}".format(key))
-            await _make_https_proxy_connection(conn, host, port, recycle=recycle)
+            await _make_https_proxy_connection(
+                conn, host, port, proxy_auth, recycle=recycle
+            )
             conn.ssl_on = True
         return conn
 

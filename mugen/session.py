@@ -6,7 +6,6 @@ from mugen.cookies import DictCookie
 from mugen.connection_pool import ConnectionPool
 from mugen.connect import Connection
 from mugen.adapters import HTTPAdapter
-from mugen.utils import is_ip
 from mugen.structures import CaseInsensitiveDict
 from mugen.models import (
     Request,
@@ -70,13 +69,13 @@ class Session(object):
         data=None,
         cookies=None,
         proxy=None,
+        proxy_auth=None,
         allow_redirects=True,
         recycle=None,
         encoding=None,
         timeout=None,
         connection=None,
     ):
-
         if recycle is None:
             recycle = self.recycle
 
@@ -90,6 +89,7 @@ class Session(object):
                     data=data,
                     cookies=cookies,
                     proxy=proxy,
+                    proxy_auth=proxy_auth,
                     allow_redirects=allow_redirects,
                     recycle=recycle,
                     encoding=encoding,
@@ -107,6 +107,7 @@ class Session(object):
                     data=data,
                     cookies=cookies,
                     proxy=proxy,
+                    proxy_auth=proxy_auth,
                     allow_redirects=allow_redirects,
                     recycle=recycle,
                     encoding=encoding,
@@ -126,12 +127,12 @@ class Session(object):
         data=None,
         cookies=None,
         proxy=None,
+        proxy_auth=None,
         allow_redirects=True,
         recycle=None,
         encoding=None,
         connection=None,
     ):
-
         logger.debug(
             "[Session.request]: "
             "method: {}, "
@@ -161,11 +162,12 @@ class Session(object):
             headers=headers,
             data=data,
             proxy=proxy,
+            proxy_auth=proxy_auth,
             cookies=self.cookies,
             encoding=encoding,
         )
 
-        # make connection
+        # Make connection
         if not connection:
             host, *_ = request.url_parse_result.netloc.split(":", 1)
             ssl = request.url_parse_result.scheme.lower() == "https"
@@ -175,7 +177,7 @@ class Session(object):
 
             if proxy:
                 conn = await self.adapter.generate_proxy_connect(
-                    host, port, ssl, proxy, self.dns_cache, recycle=recycle
+                    host, port, ssl, proxy, proxy_auth, self.dns_cache, recycle=recycle
                 )
             else:
                 conn = await self.adapter.generate_direct_connect(
@@ -225,12 +227,12 @@ class Session(object):
         data=None,
         cookies=None,
         proxy=None,
+        proxy_auth=None,
         allow_redirects=True,
         recycle=None,
         encoding=None,
         connection=None,
     ):
-
         if recycle is None:
             recycle = self.recycle
 
@@ -252,6 +254,7 @@ class Session(object):
                 data=data,
                 cookies=cookies,
                 proxy=proxy,
+                proxy_auth=proxy_auth,
                 allow_redirects=allow_redirects,
                 recycle=recycle,
                 encoding=encoding,

@@ -8,6 +8,7 @@ async def head(
     headers=None,
     cookies=None,
     proxy=None,
+    proxy_auth=None,
     allow_redirects=False,
     recycle=True,
     encoding=None,
@@ -15,7 +16,6 @@ async def head(
     connection=None,
     loop=None,
 ):
-
     response = await request(
         "HEAD",
         url,
@@ -23,6 +23,7 @@ async def head(
         headers=headers,
         cookies=cookies,
         proxy=proxy,
+        proxy_auth=proxy_auth,
         allow_redirects=allow_redirects,
         recycle=recycle,
         encoding=encoding,
@@ -39,6 +40,7 @@ async def get(
     headers=None,
     cookies=None,
     proxy=None,
+    proxy_auth=None,
     allow_redirects=True,
     recycle=True,
     encoding=None,
@@ -46,7 +48,6 @@ async def get(
     connection=None,
     loop=None,
 ):
-
     response = await request(
         "GET",
         url,
@@ -54,6 +55,7 @@ async def get(
         headers=headers,
         cookies=cookies,
         proxy=proxy,
+        proxy_auth=proxy_auth,
         allow_redirects=allow_redirects,
         recycle=recycle,
         encoding=encoding,
@@ -71,6 +73,7 @@ async def post(
     data=None,
     cookies=None,
     proxy=None,
+    proxy_auth=None,
     allow_redirects=True,
     recycle=True,
     encoding=None,
@@ -78,7 +81,6 @@ async def post(
     connection=None,
     loop=None,
 ):
-
     response = await request(
         "POST",
         url,
@@ -87,6 +89,7 @@ async def post(
         data=data,
         cookies=cookies,
         proxy=proxy,
+        proxy_auth=proxy_auth,
         allow_redirects=allow_redirects,
         recycle=recycle,
         encoding=encoding,
@@ -105,6 +108,7 @@ async def request(
     data=None,
     cookies=None,
     proxy=None,
+    proxy_auth=None,
     allow_redirects=True,
     recycle=True,
     encoding=None,
@@ -112,7 +116,6 @@ async def request(
     connection=None,
     loop=None,
 ):
-
     session = Session(recycle=recycle, encoding=encoding, loop=loop)
     response = await session.request(
         method,
@@ -122,6 +125,7 @@ async def request(
         data=data,
         cookies=cookies,
         proxy=proxy,
+        proxy_auth=proxy_auth,
         allow_redirects=allow_redirects,
         recycle=recycle,
         encoding=encoding,
@@ -141,7 +145,6 @@ def session(
     max_tasks=MAX_POOL_TASKS,
     loop=None,
 ):
-
     return Session(
         headers=headers,
         cookies=cookies,

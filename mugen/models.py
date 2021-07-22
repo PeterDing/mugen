@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 import socket
+import base64
 from urllib.parse import urlparse, ParseResult
 
 from http.cookies import SimpleCookie, Morsel
@@ -18,6 +19,8 @@ from mugen.utils import (
     decode_deflate,
     find_encoding,
     is_ip,
+    parse_proxy,
+    base64encode,
 )
 
 from httptools import HttpResponseParser
@@ -60,9 +63,9 @@ class Request(object):
         data=None,
         cookies=None,
         proxy=None,
+        proxy_auth=None,
         encoding=None,
     ):
-
         self.method = method.upper()
         self.url = url
         self.params = params or {}
@@ -70,12 +73,20 @@ class Request(object):
             headers = {}
         self.headers = CaseInsensitiveDict(headers or default_headers())
         self.data = data
-        self.proxy = proxy
         self.encoding = encoding
         if cookies is None:
             self.cookies = DictCookie()
         else:
             self.cookies = cookies
+
+        self.proxy = proxy
+
+        self.proxy_auth = proxy_auth
+        if not proxy_auth and proxy:
+            _, _, _, username, password = parse_proxy(proxy)
+            if username and password:
+                basic = f"{username}:{password}"
+                self.proxy_auth = basic
 
         self.prepare()
 
@@ -118,17 +129,26 @@ class Request(object):
 
     def make_request_line(self):
         method = self.method
+        scheme = self.url_parse_result.scheme
         host = self.url_parse_result.netloc
-        port = self.url_parse_result.port or 443
+        port = self.url_parse_result.port
+        if not port:
+            if self.ssl:
+                port = 443
+            else:
+                port = 80
+
         path = self.url_parse_result.path or "/"
         query = self.url_parse_result.query
 
         if method.lower() == "connect":
-            request_line = "{} {} {}".format(
-                method, "{}:{}".format(host, port), HTTP_VERSION
-            )
+            request_line = "{} {} {}".format(method, host, HTTP_VERSION)
         else:
-            uri = path
+            if self.proxy:
+                uri = f"{scheme}://{host}{path}"
+            else:
+                uri = path
+
             if query:
                 uri += "?" + query
             request_line = "{} {} {}".format(method, uri, HTTP_VERSION)
@@ -138,9 +158,7 @@ class Request(object):
         _headers = []
 
         if not headers.get("host"):
-            _headers.append(
-                "Host: " + host + (":443" if method.lower() == "connect" else "")
-            )
+            _headers.append("Host: " + host)
 
         if method.lower() == "post" and not self.data:
             _headers.append("Content-Length: 0")
@@ -172,6 +190,13 @@ class Request(object):
 
                 cookie = "Cookie: " + " ".join(_cookies)
                 _headers.append(cookie)
+
+        # Add Proxy-Authorization header
+        if self.proxy_auth:
+            basic = base64encode(self.proxy_auth)
+            proxy_auth = f"Proxy-Authorization: Basic {basic}"
+            _headers.append(proxy_auth)
+            _headers.append("Proxy-Connection: Keep-Alive")
 
         # make headers
         for k, v in headers.items():
