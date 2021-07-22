@@ -1,7 +1,9 @@
+from typing import Union
 import json
 import re
 import gzip
 import zlib
+import base64
 from urllib.parse import quote as url_quote
 from urllib.parse import urlparse
 
@@ -140,3 +142,10 @@ def find_encoding(content_type):
                     return None
                 else:
                     return cks[-1].strip()
+
+
+def base64encode(buf: Union[str, bytes]) -> str:
+    if isinstance(buf, str):
+        buf = buf.encode("utf-8")
+
+    return base64.b64encode(buf).decode("utf-8")
