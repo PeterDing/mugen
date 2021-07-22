@@ -1,6 +1,18 @@
 # Changelog
 
+## v0.6.0 - 2021-07-22
+
+### Added
+
+- Support Proxy-Authorization
+
+  ```python
+  await mugen.get("http://example.com", proxy='http://user:pwd@127.0.0.1:8888')
+  ```
+
 ## v0.5.1 - 2021-07-16
+
+### Fixed
 
 - FIXME: File descriptor n is used by transport
 

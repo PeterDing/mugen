@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "mugen"
 homepage = "https://github.com/PeterDing/mugen"
-version = "0.5.1"
+version = "0.6.0"
 description = "Mugen - HTTP for Asynchronous Requests"
 authors = ["PeterDing <dfhayst@gmail.com>"]
 license = "MIT"
