@@ -130,19 +130,19 @@ class Connection(object):
             raise ConnectionIsStale("{}".format(self.key))
 
         if size < 0:
-            chuck = await asyncio.wait_for(
+            chunk = await asyncio.wait_for(
                 self.reader.read(size), timeout=MAX_CONNECTION_TIMEOUT
             )
-            return chuck
+            return chunk
         else:
-            chucks = b""
+            chunks = b""
             while size:
-                chuck = await asyncio.wait_for(
+                chunk = await asyncio.wait_for(
                     self.reader.read(size), timeout=MAX_CONNECTION_TIMEOUT
                 )
-                size -= len(chuck)
-                chucks += chuck
-            return chucks
+                size -= len(chunk)
+                chunks += chunk
+            return chunks
 
     @async_error_proof
     async def readline(self):
@@ -155,15 +155,15 @@ class Connection(object):
             )
             raise ConnectionIsStale("{}".format(self.key))
 
-        chuck = await asyncio.wait_for(
+        chunk = await asyncio.wait_for(
             self.reader.readline(), timeout=MAX_CONNECTION_TIMEOUT
         )
 
         logger.debug(
-            "[Connection.readline]: " "{}: size = {}".format(self.key, len(chuck))
+            "[Connection.readline]: " "{}: size = {}".format(self.key, len(chunk))
         )
 
-        return chuck
+        return chunk
 
     def close(self):
         logger.debug(
