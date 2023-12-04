@@ -196,8 +196,8 @@ class Session(object):
             await self.adapter.send_request(conn, request)
         except Exception as err:
             logger.debug("[Session._request]: send_request error, {}".format(err))
-            if method.lower() != "connect":
-                self.connection_pool.recycle_connection(conn)
+            logger.warning("Close connect at request: %s", conn)
+            conn.close()
             raise err
 
         try:
@@ -205,8 +205,8 @@ class Session(object):
             response = await self.adapter.get_response(method, conn, encoding=encoding)
         except Exception as err:
             logger.debug("[Session._request]: get_response error, {}".format(err))
-            if method.lower() != "connect":
-                self.connection_pool.recycle_connection(conn)
+            logger.warning("Close connect at response: %s", conn)
+            conn.close()
             raise err
 
         # update cookies
