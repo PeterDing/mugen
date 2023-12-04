@@ -47,21 +47,14 @@ class ConnectionPool(Singleton):
         asyncio.ensure_future(self._keep_alive_watcher(), loop=loop)
 
     def __repr__(self):
-        return (
-            "<ConnectionPool: "
-            + "connections: "
-            + ", ".join(
-                [
-                    "{}: {}".format(key, len(conns))
-                    for key, conns in self.__connections.items()
-                ]
-            )
-            + " pool_size: {}".format(len(self.__connections))
-            + ">"
+        conns = ", ".join(
+            [f"{key}: {len(conns)}" for key, conns in self.__connections.items()]
         )
+        size = len(self)
+        return f"<ConnectionPool: pool_size: {size} connections: {conns} >"
 
     def __len__(self) -> int:
-        return len(self.__connections)
+        return len(self.__connections or [])
 
     async def _keep_alive_watcher(self):
         # recheck connections for each MAX_KEEP_ALIVE_TIME
