@@ -47,7 +47,6 @@ class Connection(object):
     def __init__(
         self, ip, port, ssl=False, key=None, recycle=True, timeout=None, loop=None
     ):
-
         self.ip = ip
         self.port = port
         self.ssl = ssl

@@ -28,7 +28,6 @@ class ConnectionPool(Singleton):
         recheck_internal=DEFAULT_RECHECK_INTERNAL,
         loop=None,
     ):
-
         if hasattr(self, "_initiated"):
             return None
 

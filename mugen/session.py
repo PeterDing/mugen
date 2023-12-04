@@ -301,7 +301,6 @@ class Session(object):
         timeout=None,
         connection=None,
     ):
-
         if recycle is None:
             recycle = self.recycle
 
@@ -333,7 +332,6 @@ class Session(object):
         timeout=None,
         connection=None,
     ):
-
         if recycle is None:
             recycle = self.recycle
 
@@ -366,7 +364,6 @@ class Session(object):
         timeout=None,
         connection=None,
     ):
-
         if recycle is None:
             recycle = self.recycle
 

@@ -46,7 +46,6 @@ logger = logging.getLogger(__name__)
 
 class Singleton(object):
     def __new__(cls, *args, **kwargs):
-
         if not hasattr(cls, "_instance"):
             instance = object.__new__(cls)
             cls._instance = instance
