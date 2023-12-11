@@ -2,7 +2,7 @@
 
 Mugen is library for http asynchronous requests.
 
-Only running on python ^3.7
+Only running on Python ^3.7
 
 ok, code demo:
 

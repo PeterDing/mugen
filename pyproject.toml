@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "mugen"
 homepage = "https://github.com/PeterDing/mugen"
-version = "0.6.0"
+version = "0.6.1"
 description = "Mugen - HTTP for Asynchronous Requests"
 authors = ["PeterDing <dfhayst@gmail.com>"]
 license = "MIT"
@@ -10,9 +10,11 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 
 [tool.poetry.dependencies]
